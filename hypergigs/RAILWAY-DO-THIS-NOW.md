@@ -32,9 +32,14 @@ Railway Dashboard
         └── "Empty Service" (or use existing if you already created one)
             └── Settings tab
                 └── Root Directory: packages/backend
-                └── Leave Build Command empty
-                └── Leave Start Command empty
+                └── Leave Build Command empty (using nixpacks.toml)
+                └── Leave Start Command empty (using railway.json)
 ```
+
+**Important Notes:**
+- Railway will use the nixpacks.toml file for build configuration
+- The build will run `npm install` (not `npm ci`) since this is a monorepo
+- Prisma client generation and TypeScript compilation happen automatically
 
 ### STEP 3: Connect to GitHub
 

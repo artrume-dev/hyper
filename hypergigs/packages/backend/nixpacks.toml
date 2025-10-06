@@ -2,7 +2,8 @@
 nixPkgs = ["nodejs_20", "openssl"]
 
 [phases.install]
-cmds = ["npm ci --omit=dev"]
+# Use npm install instead of npm ci since we're in a monorepo
+cmds = ["npm install --production=false"]
 
 [phases.build]
 cmds = [
