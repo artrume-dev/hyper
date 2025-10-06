@@ -1,0 +1,39 @@
+{
+  "name": "hypergigs",
+  "version": "1.0.0",
+  "description": "Modern freelance platform for digital teams - Migrated from Teamstack.co",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:backend": "npm run dev -w packages/backend",
+    "dev:frontend": "npm run dev -w packages/frontend",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist packages/*/build"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "freelance",
+    "teams",
+    "collaboration",
+    "digital-agencies",
+    "startups"
+  ],
+  "author": "Hypergigs Team",
+  "license": "UNLICENSED"
+}

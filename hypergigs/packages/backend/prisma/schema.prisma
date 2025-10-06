@@ -1,0 +1,269 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Note: SQLite doesn't support enums, using String with default values
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  username          String    @unique
+  password          String
+  firstName         String?
+  lastName          String?
+  role              String    @default("FREELANCER") // FREELANCER | AGENCY | STARTUP
+  bio               String?
+  location          String?
+  avatar            String?
+  available         Boolean   @default(true)
+  nextAvailability  DateTime?
+  
+  // Relationships
+  ownedTeams        Team[]            @relation("TeamOwner")
+  teamMembers       TeamMember[]
+  sentInvitations   Invitation[]      @relation("InvitationSender")
+  receivedInvitations Invitation[]    @relation("InvitationReceiver")
+  followers         Follow[]          @relation("UserFollowers")
+  following         Follow[]          @relation("UserFollowing")
+  sentMessages      Message[]         @relation("MessageSender")
+  receivedMessages  Message[]         @relation("MessageReceiver")
+  sentNotifications Notification[]    @relation("NotificationSender")
+  receivedNotifications Notification[] @relation("NotificationReceiver")
+  skills            UserSkill[]
+  portfolios        Portfolio[]
+  workExperiences   WorkExperience[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([location])
+}
+
+model Team {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  description String?
+  avatar      String?
+  type        String       @default("PROJECT") // PROJECT | AGENCY | STARTUP
+  city        String?
+  
+  // Owner relationship
+  ownerId     String
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  
+  // Relationships
+  members     TeamMember[]
+  invitations Invitation[]
+  projects    Project[]
+  messages    Message[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@index([slug])
+  @@index([ownerId])
+  @@index([type])
+}
+
+model TeamMember {
+  id        String          @id @default(uuid())
+  role      String          @default("MEMBER") // OWNER | ADMIN | MEMBER
+  
+  // Relationships
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  joinedAt  DateTime        @default(now())
+  
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
+}
+
+model Invitation {
+  id          String           @id @default(uuid())
+  status      String           @default("PENDING") // PENDING | ACCEPTED | DECLINED | CANCELLED | EXPIRED
+  role        String           @default("MEMBER") // OWNER | ADMIN | MEMBER - role user will have when accepting
+  message     String?
+  expiresAt   DateTime
+  
+  // Sender (initiator)
+  senderId    String
+  sender      User             @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  // Receiver
+  receiverId  String
+  receiver    User             @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  // Team context
+  teamId      String
+  team        Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([teamId])
+  @@index([status])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  
+  // Follower (who follows)
+  followerId  String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  
+  // Following (who is being followed)
+  followingId String
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  read       Boolean  @default(false)
+  
+  // Sender
+  senderId   String
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  // Receiver (for direct messages)
+  receiverId String?
+  receiver   User?    @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  // Team (for team messages)
+  teamId     String?
+  team       Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([teamId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  type       String // FOLLOW | TEAM_INVITATION | USER_INVITATION | INVITATION_ACCEPTED | INVITATION_DECLINED | MESSAGE | TEAM_MESSAGE
+  message    String
+  read       Boolean          @default(false)
+  entityId   String?
+  entityType String?
+  
+  // Sender
+  senderId   String?
+  sender     User?            @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+  
+  // Receiver
+  receiverId String
+  receiver   User             @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime         @default(now())
+  
+  @@index([receiverId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model Skill {
+  id        String      @id @default(uuid())
+  name      String      @unique
+  category  String?
+  
+  users     UserSkill[]
+  
+  createdAt DateTime    @default(now())
+}
+
+model UserSkill {
+  id        String   @id @default(uuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  skillId   String
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([skillId])
+}
+
+model Portfolio {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  companyName String?
+  role        String?
+  workUrls    String?
+  mediaFile   String?
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+model WorkExperience {
+  id          String    @id @default(uuid())
+  title       String
+  company     String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  present     Boolean   @default(false)
+  
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([userId])
+}
+
+model Project {
+  id               String    @id @default(uuid())
+  title            String
+  description      String
+  workLocation     String?
+  startDate        DateTime?
+  duration         Int?
+  minCost          Int?
+  maxCost          Int?
+  currency         String?
+  
+  teamId           String
+  team             Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  @@index([teamId])
+}
