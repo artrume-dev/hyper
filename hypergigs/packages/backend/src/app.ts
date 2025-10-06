@@ -11,9 +11,9 @@ import invitationRoutes from './routes/invitation.routes.js';
 // Create Express app
 export const app = express();
 
-// CORS configuration - allow both common Vite dev ports
+// CORS configuration - allow Vite dev and preview ports
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:4173'],
   credentials: true,
   optionsSuccessStatus: 200
 };
