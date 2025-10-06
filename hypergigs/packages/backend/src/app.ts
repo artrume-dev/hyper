@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import authRoutes from './routes/auth.routes.js';
@@ -25,12 +24,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // API routes
-app.get('/api', (req, res) => {
+app.get('/api', (_req, res) => {
   res.json({
     message: 'Hypergigs API',
     version: '1.0.0',
