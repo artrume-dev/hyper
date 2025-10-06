@@ -20,37 +20,56 @@
 
 ## 🚀 Railway Deployment Steps
 
-### Option 1: Deploy Both as Monorepo (Recommended)
+### ⚠️ Important: Database Provider Change
 
-#### 1. Backend Service
+The Prisma schema has been updated to use **PostgreSQL** for production (Railway) instead of SQLite. This is necessary because Railway doesn't support SQLite.
+
+**What this means:**
+- Local development: Still uses SQLite (`file:./prisma/dev.db`)
+- Production (Railway): Uses PostgreSQL (Railway provides this)
+
+### Step-by-Step Deployment
+
+#### 1. Add PostgreSQL Database First
+
+**Before deploying the backend**, create the PostgreSQL database:
+- In Railway project, click "New" → "Database" → "Add PostgreSQL"
+- Railway will automatically create a `DATABASE_URL` environment variable
+- **Important**: Note this URL, you'll need it for migrations
+
+#### 2. Backend Service Setup
 
 **Create New Service in Railway**:
-- Click "New Project" → "Deploy from GitHub repo"
-- Select your repository
+- Click "New" → "Empty Service"
+- Connect to GitHub repository
 - Configure:
-  - **Root Directory**: `hypergigs/packages/backend`
-  - **Build Command**: `npm install && npm run build && npm run db:migrate:deploy`
-  - **Start Command**: `node dist/server.js`
-  - **Watch Paths**: `hypergigs/packages/backend/**`
+  - **Root Directory**: `packages/backend`
+  - **Build Command**: (leave empty, using railway.json)
+  - **Start Command**: (leave empty, using railway.json)
 
-**Environment Variables**:
+**Environment Variables** (Add these in Railway dashboard):
 ```env
 NODE_ENV=production
-PORT=3001
-DATABASE_URL=<railway-postgres-url>
-JWT_SECRET=<generate-secure-random-string>
-JWT_REFRESH_SECRET=<generate-secure-random-string>
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+JWT_SECRET=<generate-with-command-below>
+JWT_REFRESH_SECRET=<generate-with-command-below>
 JWT_EXPIRES_IN=7d
 JWT_REFRESH_EXPIRES_IN=30d
-CORS_ORIGIN=https://your-frontend.railway.app
+CORS_ORIGIN=http://localhost:5173
 ```
 
-**Add PostgreSQL Database**:
-- Click "New" → "Database" → "Add PostgreSQL"
-- Railway will automatically set `DATABASE_URL`
-- Run migrations: `npm run db:migrate:deploy`
+**Generate JWT Secrets**:
+```bash
+# Run these locally to generate secure secrets
+openssl rand -base64 32
+openssl rand -base64 32
+```
 
-#### 2. Frontend Service
+**Railway Configuration Files** (already created):
+- `packages/backend/railway.json` - Railway build/deploy config
+- `packages/backend/nixpacks.toml` - Nixpacks build configuration
+
+#### 3. Frontend Service
 
 **Create Another Service**:
 - Click "New" → "Deploy from GitHub repo" (same repo)
