@@ -11,9 +11,28 @@ import invitationRoutes from './routes/invitation.routes.js';
 // Create Express app
 export const app = express();
 
-// CORS configuration - allow Vite dev and preview ports
+// CORS configuration - allow Vite dev and preview ports + production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174', 
+  'http://localhost:4173',
+  'http://localhost:4174',
+  process.env.CORS_ORIGIN, // Railway production frontend
+  process.env.FRONTEND_URL, // Alternative env var
+].filter(Boolean); // Remove undefined values
+
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:4173', 'http://localhost:4174'],
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
