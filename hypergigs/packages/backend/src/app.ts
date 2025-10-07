@@ -21,19 +21,25 @@ const allowedOrigins = [
   process.env.FRONTEND_URL, // Alternative env var
 ].filter(Boolean); // Remove undefined values
 
+// Log allowed origins for debugging
+logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (like mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
+      logger.info(`CORS: Allowing origin: ${origin}`);
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      logger.warn(`CORS: Blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
 
