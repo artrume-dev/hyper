@@ -6,7 +6,9 @@ dotenv.config();
 export const config = {
   server: {
     port: parseInt(process.env.PORT || '3001', 10),
-    host: process.env.HOST || 'localhost',
+    // Use 0.0.0.0 in production to accept external connections (Railway, Docker, etc.)
+    // Use localhost in development
+    host: process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'),
     nodeEnv: process.env.NODE_ENV || 'development',
   },
   jwt: {
