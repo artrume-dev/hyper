@@ -54,7 +54,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const { firstName, lastName, username, bio, location, available, nextAvailability, avatar } = req.body;
+    const { firstName, lastName, username, bio, location, available, nextAvailability, avatar, hourlyRate } = req.body;
 
     const user = await userService.updateProfile(req.userId, {
       firstName,
@@ -65,6 +65,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       available,
       nextAvailability: nextAvailability ? new Date(nextAvailability) : undefined,
       avatar,
+      hourlyRate,
     });
 
     res.status(200).json({ user });
