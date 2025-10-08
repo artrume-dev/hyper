@@ -488,15 +488,12 @@ export default function ProfilePage() {
               {/* Stats Grid - Awwwards Style */}
               <div className="border border-border rounded-2xl overflow-hidden">
                 {/* Header */}
-                <div className="grid grid-cols-4 border-b border-border bg-gray-50">
+                <div className="grid grid-cols-3 border-b border-border bg-gray-50">
                   <div className="px-4 py-3 text-center border-r border-border">
                     <span className="text-xs font-semibold uppercase tracking-wider">Works</span>
                   </div>
                   <div className="px-4 py-3 text-center border-r border-border">
                     <span className="text-xs font-semibold uppercase tracking-wider">Per HR</span>
-                  </div>
-                  <div className="px-4 py-3 text-center border-r border-border">
-                    <span className="text-xs font-semibold uppercase tracking-wider">SOTD</span>
                   </div>
                   <div className="px-4 py-3 text-center">
                     <span className="text-xs font-semibold uppercase tracking-wider">HM</span>
@@ -504,15 +501,12 @@ export default function ProfilePage() {
                 </div>
                 
                 {/* Values */}
-                <div className="grid grid-cols-4 bg-white">
+                <div className="grid grid-cols-3 bg-white">
                   <div className="px-4 py-6 text-center border-r border-border">
                     <span className="text-4xl font-bold">{portfolio.length || 0}</span>
                   </div>
                   <div className="px-4 py-6 text-center border-r border-border">
                     <span className="text-4xl font-bold">{profile.hourlyRate && profile.hourlyRate > 0 ? `$${profile.hourlyRate}` : '0'}</span>
-                  </div>
-                  <div className="px-4 py-6 text-center border-r border-border">
-                    <span className="text-4xl font-bold">0</span>
                   </div>
                   <div className="px-4 py-6 text-center">
                     <span className="text-4xl font-bold">0</span>
