@@ -143,7 +143,7 @@ export default function ProfilePage() {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) : value,
+      [name]: type === 'number' ? (value === '' ? 0 : parseFloat(value) || 0) : value,
     }));
   };
 
@@ -457,7 +457,7 @@ export default function ProfilePage() {
                     <span className="text-sm">{profile.location}</span>
                   </div>
                 )}
-                {profile.hourlyRate && (
+                {profile.hourlyRate && profile.hourlyRate > 0 && (
                   <div className="flex items-center gap-2 text-foreground">
                     <DollarSign className="w-4 h-4" />
                     <span className="text-sm">${profile.hourlyRate}/hr</span>
@@ -517,7 +517,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Daily Rate */}
-              {profile.hourlyRate && (
+              {profile.hourlyRate && profile.hourlyRate > 0 && (
                 <div className="text-center p-6 border border-border rounded-2xl bg-white">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Daily Rate</p>
                   <p className="text-3xl font-bold">${(profile.hourlyRate * 8).toFixed(0)}</p>
@@ -636,8 +636,11 @@ export default function ProfilePage() {
                     <input
                       type="number"
                       name="hourlyRate"
-                      value={formData.hourlyRate || 0}
+                      value={formData.hourlyRate || ''}
                       onChange={handleChange}
+                      min="0"
+                      step="1"
+                      placeholder="Enter your hourly rate"
                       className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>

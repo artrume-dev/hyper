@@ -10,6 +10,7 @@ export interface UpdateProfileData {
   available?: boolean;
   nextAvailability?: Date;
   avatar?: string;
+  hourlyRate?: number;
 }
 
 export interface SearchUsersFilters {
@@ -39,6 +40,7 @@ export class UserService {
         avatar: true,
         available: true,
         nextAvailability: true,
+        hourlyRate: true,
         createdAt: true,
         updatedAt: true,
         _count: {

@@ -27,6 +27,7 @@ model User {
   avatar            String?
   available         Boolean   @default(true)
   nextAvailability  DateTime?
+  hourlyRate        Float?
   
   // Relationships
   ownedTeams        Team[]            @relation("TeamOwner")

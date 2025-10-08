@@ -199,7 +199,7 @@ export default function FreelancersPage() {
                                 key={userSkill.id}
                                 className="px-3 py-1 rounded-full bg-muted text-foreground text-xs font-medium border border-border"
                               >
-                                {userSkill.skill.name}
+                                {userSkill.skill?.name || 'Skill'}
                               </span>
                             ))}
                             {freelancer.skills.length > 3 && (
