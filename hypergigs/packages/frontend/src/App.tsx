@@ -29,7 +29,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/profile/:userId" element={<ProfilePage />} />
+          <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/teams/my" element={<MyTeamsPage />} />
           <Route path="/teams/create" element={<CreateTeamPage />} />
           <Route path="/invitations" element={<InvitationsPage />} />

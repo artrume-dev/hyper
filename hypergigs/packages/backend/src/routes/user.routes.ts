@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getUserProfile,
+  getUserProfileByUsername,
   updateProfile,
   updateAvatar,
   searchUsers,
@@ -25,6 +26,13 @@ const router = Router();
  * @access  Public
  */
 router.get('/search', searchUsers);
+
+/**
+ * @route   GET /api/users/username/:username
+ * @desc    Get user profile by username
+ * @access  Public
+ */
+router.get('/username/:username', getUserProfileByUsername);
 
 /**
  * @route   GET /api/users/:userId

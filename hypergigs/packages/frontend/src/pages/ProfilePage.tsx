@@ -17,7 +17,7 @@ import { MapPin, DollarSign, Briefcase, Calendar, ExternalLink, Plus, X, Edit2, 
 import { searchSkills } from '@/data/skills';
 
 export default function ProfilePage() {
-  const { userId } = useParams<{ userId: string }>();
+  const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
   
@@ -71,24 +71,28 @@ export default function ProfilePage() {
     present: false
   });
 
-  const isOwnProfile = !userId || userId === currentUser?.id;
+  const isOwnProfile = !username || username === currentUser?.username;
 
   useEffect(() => {
     loadProfile();
-  }, [userId]);
+  }, [username]);
 
   const loadProfile = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const profileId = userId || currentUser?.id;
-      if (!profileId) {
+      // If no username in URL, fetch current user's profile
+      // Otherwise fetch by username
+      let data: UserProfile;
+      if (username) {
+        data = await userService.getUserProfileByUsername(username);
+      } else if (currentUser?.id) {
+        data = await userService.getUserProfile(currentUser.id);
+      } else {
         navigate('/login');
         return;
       }
-
-      const data = await userService.getUserProfile(profileId);
       setProfile(data);
       setSkills(data.skills || []);
       setPortfolio(data.portfolios || []);

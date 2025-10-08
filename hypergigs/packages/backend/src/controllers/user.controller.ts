@@ -24,6 +24,27 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
 };
 
 /**
+ * Get user profile by username
+ */
+export const getUserProfileByUsername = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username } = req.params;
+
+    const user = await userService.getUserByUsername(username);
+
+    res.status(200).json({ user });
+  } catch (error) {
+    logger.error('Get user profile by username error:', error);
+    
+    if (error instanceof Error) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to get user profile' });
+    }
+  }
+};
+
+/**
  * Update current user profile
  */
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {

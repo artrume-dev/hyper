@@ -77,6 +77,60 @@ export class UserService {
   }
 
   /**
+   * Get user by username (public profile view)
+   */
+  async getUserByUsername(username: string) {
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        bio: true,
+        location: true,
+        avatar: true,
+        available: true,
+        nextAvailability: true,
+        hourlyRate: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            followers: true,
+            following: true,
+            ownedTeams: true,
+            teamMembers: true,
+            portfolios: true,
+            workExperiences: true,
+          },
+        },
+        skills: {
+          include: {
+            skill: true,
+          },
+        },
+        portfolios: {
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+        },
+        workExperiences: {
+          orderBy: { startDate: 'desc' },
+          take: 5,
+        },
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return user;
+  }
+
+  /**
    * Update user profile
    */
   async updateProfile(userId: string, data: UpdateProfileData) {

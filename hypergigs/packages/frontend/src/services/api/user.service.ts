@@ -25,6 +25,14 @@ export const userService = {
   },
 
   /**
+   * Get user profile by username
+   */
+  async getUserProfileByUsername(username: string): Promise<UserProfile> {
+    const response = await api.get<{ user: UserProfile }>(`/api/users/username/${username}`);
+    return response.data.user;
+  },
+
+  /**
    * Update current user profile
    */
   async updateProfile(data: UpdateProfileRequest): Promise<User> {
