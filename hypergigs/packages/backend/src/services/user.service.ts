@@ -169,6 +169,7 @@ export class UserService {
         avatar: true,
         available: true,
         nextAvailability: true,
+        hourlyRate: true,
         updatedAt: true,
       },
     });
