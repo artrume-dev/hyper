@@ -493,7 +493,7 @@ export default function ProfilePage() {
                     <span className="text-xs font-semibold uppercase tracking-wider">Works</span>
                   </div>
                   <div className="px-4 py-3 text-center border-r border-border">
-                    <span className="text-xs font-semibold uppercase tracking-wider">SOTM</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider">Per HR</span>
                   </div>
                   <div className="px-4 py-3 text-center border-r border-border">
                     <span className="text-xs font-semibold uppercase tracking-wider">SOTD</span>
@@ -509,7 +509,7 @@ export default function ProfilePage() {
                     <span className="text-4xl font-bold">{portfolio.length || 0}</span>
                   </div>
                   <div className="px-4 py-6 text-center border-r border-border">
-                    <span className="text-4xl font-bold">0</span>
+                    <span className="text-4xl font-bold">{profile.hourlyRate && profile.hourlyRate > 0 ? `$${profile.hourlyRate}` : '0'}</span>
                   </div>
                   <div className="px-4 py-6 text-center border-r border-border">
                     <span className="text-4xl font-bold">0</span>
