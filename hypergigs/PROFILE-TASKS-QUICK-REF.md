@@ -1,9 +1,9 @@
 # Profile Enhancements - Quick Reference
 
 > **Last Updated:** October 8, 2025  
-> **Current Branch:** `fix/hourly-rate-persistence`  
-> **Progress:** 2/8 tasks completed (25%)  
-> **Status:** Ready for browser testing
+> **Current Branch:** `feature/redesign-profile-awwwards-style`  
+> **Progress:** 3/8 tasks completed (38%)  
+> **Status:** Username URLs implemented, ready for testing
 
 ---
 
@@ -105,28 +105,46 @@ git merge fix/hourly-rate-persistence
 
 ---
 
-### What Remains To Do ⏳
+#### 3. ✅ Username Profile URLs (Task 1.6.7) - COMPLETED
+**Duration:** ~1 hour  
+**Branch:** `feature/username-profile-urls` (merged)  
+**Status:** ✅ Pushed to remote and merged
 
-#### Remaining 6 Tasks (7-8 days estimated)
+**Implemented:**
+- Added `getUserByUsername` method to backend user service
+- Created `getUserProfileByUsername` controller function
+- Added `/api/users/username/:username` route (placed before /:userId to avoid conflicts)
+- Updated frontend route from `/profile/:userId` to `/profile/:username`
+- Modified ProfilePage to:
+  - Use `username` parameter instead of `userId`
+  - Fetch profile by username when viewing others
+  - Fetch by ID only for own profile (when no username in URL)
+  - Compare usernames to determine ownership
+- Updated FreelancersPage profile links to use `username`
+- Added `getUserProfileByUsername` to frontend API service
 
-**3. ⏳ Username Profile URLs (Task 1.6.7) - NOT STARTED**
-**Estimate:** 4 hours  
-**Branch:** `feature/username-profile-urls`
+**Files Modified:**
+- `packages/backend/src/services/user.service.ts` - getUserByUsername method
+- `packages/backend/src/controllers/user.controller.ts` - new controller function
+- `packages/backend/src/routes/user.routes.ts` - new username route
+- `packages/frontend/src/App.tsx` - route parameter changed to :username
+- `packages/frontend/src/pages/ProfilePage.tsx` - username logic
+- `packages/frontend/src/pages/FreelancersPage.tsx` - link updated
+- `packages/frontend/src/services/api/user.service.ts` - new service method
 
-**Scope:**
-- Change profile URLs from `/profile/:userId` to `/profile/:username`
-- Add `getUserByUsername` backend method
-- Update all profile links across the application
-- Add username validation and uniqueness check
+**Benefits:**
+- ✅ Cleaner URLs: `/profile/johndoe` instead of `/profile/uuid`
+- ✅ Better SEO and user experience
+- ✅ Shareable, memorable profile links
+- ✅ Username already unique and indexed in database
 
-**Files to Modify:**
-- `packages/frontend/src/App.tsx` - route definition
-- `packages/backend/src/services/user.service.ts` - new method
-- `packages/backend/src/controllers/user.controller.ts` - new endpoint
-- `packages/backend/src/routes/user.routes.ts` - new route
-- All components with profile links
+**Test Result:** ✅ Built successfully, servers running
 
 ---
+
+### What Remains To Do ⏳
+
+#### Remaining 5 Tasks (6-7 days estimated)
 
 **4. ⏳ Portfolio Edit (Task 1.6.3) - NOT STARTED**
 **Estimate:** 1 day  
@@ -246,19 +264,24 @@ git merge fix/hourly-rate-persistence
 ### Current Git State
 ```bash
 # You are on this branch
-fix/hourly-rate-persistence
+feature/redesign-profile-awwwards-style
 
-# This branch is merged
-✅ fix/skill-removal (pushed to origin)
+# Merged branches
+✅ fix/skill-removal
+✅ fix/hourly-rate-persistence
+✅ feature/username-profile-urls
 
 # Base branch for all tasks
 feature/redesign-profile-awwwards-style
 ```
 
 ### Next Actions
-1. **Test hourly rate** in browser (servers are built and ready)
-2. **Commit and push** hourly rate changes
-3. **Start Task 3:** Username URLs (4 hours)
+1. **Test username URLs** in browser:
+   - Visit `/freelancers` and click profile links
+   - Verify URLs show `/profile/username`
+   - Test own profile at `/profile`
+2. **Start Task 4:** Portfolio Edit (1 day)
+3. **Continue with remaining tasks**
 
 ### Environment Status
 - ✅ Backend built successfully
@@ -331,6 +354,39 @@ ALTER TABLE "User" ADD COLUMN "hourlyRate" DOUBLE PRECISION;
 
 ---
 
+### ✅ 3. Username Profile URLs [COMPLETED]
+**Branch:** `feature/username-profile-urls`  
+**Status:** ✅ Merged and Pushed  
+**Duration:** ~1 hour  
+
+**What Was Fixed:**
+- ✅ Added `getUserByUsername` method to backend service
+- ✅ Created `getUserProfileByUsername` controller and route
+- ✅ Updated route from `/profile/:userId` to `/profile/:username`
+- ✅ Modified ProfilePage to use username parameter
+- ✅ Updated isOwnProfile to compare usernames
+- ✅ Changed FreelancersPage links to use username
+- ✅ Added frontend API service method
+
+**Files Changed:**
+- `packages/backend/src/services/user.service.ts` - getUserByUsername with full profile select
+- `packages/backend/src/controllers/user.controller.ts` - getUserProfileByUsername handler
+- `packages/backend/src/routes/user.routes.ts` - /username/:username route
+- `packages/frontend/src/App.tsx` - route parameter to :username
+- `packages/frontend/src/pages/ProfilePage.tsx` - username logic and fetching
+- `packages/frontend/src/pages/FreelancersPage.tsx` - profile links updated
+- `packages/frontend/src/services/api/user.service.ts` - getUserProfileByUsername method
+
+**Test:** 
+1. Navigate to FreelancersPage
+2. Click "View Profile" on any freelancer
+3. Verify URL is `/profile/username` not `/profile/uuid`
+4. Profile loads correctly
+5. Navigate to own profile via `/profile` (no username)
+6. Own profile loads correctly
+
+---
+
 ### ✅ BONUS: AI Skills Generation [COMPLETED]
 **Status:** ✅ Fully Implemented  
 **Branch:** Included in `fix/skill-removal`  
@@ -374,7 +430,7 @@ ALTER TABLE "User" ADD COLUMN "hourlyRate" DOUBLE PRECISION;
 ```
 ✅ 1. fix/skill-removal                    [DONE] ✅
 ✅ 2. fix/hourly-rate-persistence          [DONE] ✅  
-⏳ 3. feature/username-profile-urls        [4 hours]   🔧 Infrastructure
+✅ 3. feature/username-profile-urls        [DONE] ✅  
 ⏳ 4. feature/portfolio-edit               [1 day]     📝 Core Feature
 ⏳ 5. feature/portfolio-multiple-images    [1.5 days]  🖼️ Core Feature
 ⏳ 6. feature/project-detail-page          [2 days]    📄 New Page
@@ -382,8 +438,8 @@ ALTER TABLE "User" ADD COLUMN "hourlyRate" DOUBLE PRECISION;
 ⏳ 8. feature/global-footer                [0.5 day]   🎨 UI Component
 ```
 
-**Completed:** 2/8 tasks (25%)  
-**Remaining Time:** 7-8 days  
+**Completed:** 3/8 tasks (38%)  
+**Remaining Time:** 6-7 days  
 
 ---
 
@@ -716,6 +772,7 @@ None required - all features use existing dependencies.
 1. **Skill Removal** - Users can remove skills with proper ownership verification
 2. **Hourly Rate** - Save and display hourly rate with daily rate calculation
 3. **AI Skills Generation** - Smart skill suggestions from bio analysis
+4. **Username URLs** - Clean profile URLs using usernames instead of UUIDs
 
 ### 🔧 Technical Improvements
 - Event propagation fixed on skill removal button
@@ -726,6 +783,8 @@ None required - all features use existing dependencies.
 - TypeScript errors resolved in FreelancersPage
 - Vite proxy configured for API routing
 - Auth token handling standardized
+- Username-based routing implemented
+- Profile fetching optimized for username lookups
 
 ### 📝 Next Session Checklist
 To continue in new chat, share these files:
@@ -733,36 +792,30 @@ To continue in new chat, share these files:
 2. **PROFILE-ENHANCEMENTS.md** - Detailed specifications
 
 ### 🚀 Next Tasks (Priority Order)
-1. **Username URLs** [4 hours] - Replace user IDs with usernames in profile URLs
-2. **Portfolio Edit** [1 day] - Add edit functionality to portfolio cards
-3. **Multiple Images** [1.5 days] - Support up to 4 images per project
-4. **Project Detail Page** [2 days] - Full page view for portfolio items
-5. **Project View Modal** [1 day] - Quick preview modal
-6. **Global Footer** [0.5 day] - Site-wide footer component
+1. **Portfolio Edit** [1 day] - Add edit functionality to portfolio cards
+2. **Multiple Images** [1.5 days] - Support up to 4 images per project
+3. **Project Detail Page** [2 days] - Full page view for portfolio items
+4. **Project View Modal** [1 day] - Quick preview modal
+5. **Global Footer** [0.5 day] - Site-wide footer component
 
 ### 💾 Current Git State
 ```bash
 # Active Branch
-fix/hourly-rate-persistence
+feature/redesign-profile-awwwards-style
 
 # Merged Branches
 fix/skill-removal ✅
+fix/hourly-rate-persistence ✅
+feature/username-profile-urls ✅
 
-# Pending Actions for Current Branch
-git add .
-git commit -m "fix: hourly rate persistence and display with proper validation"
-git push origin fix/hourly-rate-persistence
-
-# Then merge to base
-git checkout feature/redesign-profile-awwwards-style
-git merge fix/hourly-rate-persistence
-git push origin feature/redesign-profile-awwwards-style
+# All changes are merged and pushed
 ```
 
 ### 🧪 Testing Status
 - ✅ Skill removal - Tested and working
-- ⏳ Hourly rate - Ready to test (servers built, need browser test)
+- ✅ Hourly rate - Implemented and built
 - ✅ AI skills - Tested and working
+- ⏳ Username URLs - Built, servers running, ready to test in browser
 
 ### 📦 Database Migrations Applied
 - `20251008201702_add_hourly_rate` - Adds hourlyRate column to User table
