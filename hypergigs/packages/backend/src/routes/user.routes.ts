@@ -55,11 +55,11 @@ router.patch('/me/avatar', authenticate, updateAvatar);
 router.post('/me/skills', authenticate, addSkill);
 
 /**
- * @route   DELETE /api/users/me/skills/:skillId
+ * @route   DELETE /api/users/me/skills/:userSkillId
  * @desc    Remove skill from user
  * @access  Private
  */
-router.delete('/me/skills/:skillId', authenticate, removeSkill);
+router.delete('/me/skills/:userSkillId', authenticate, removeSkill);
 
 /**
  * @route   POST /api/users/me/portfolio

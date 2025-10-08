@@ -9,6 +9,7 @@ export interface UpdateProfileData {
   location?: string;
   available?: boolean;
   nextAvailability?: Date;
+  avatar?: string;
 }
 
 export interface SearchUsersFilters {
@@ -244,17 +245,24 @@ export class UserService {
   /**
    * Remove skill from user
    */
-  async removeSkill(userId: string, skillId: string) {
-    await prisma.userSkill.delete({
+  async removeSkill(userId: string, userSkillId: string) {
+    // Verify the skill belongs to the user before deleting
+    const userSkill = await prisma.userSkill.findFirst({
       where: {
-        userId_skillId: {
-          userId,
-          skillId,
-        },
-      },
+        id: userSkillId,
+        userId: userId
+      }
     });
 
-    logger.info(`Skill removed from user ${userId}: ${skillId}`);
+    if (!userSkill) {
+      throw new Error('Skill not found or unauthorized');
+    }
+
+    await prisma.userSkill.delete({
+      where: { id: userSkillId }
+    });
+
+    logger.info(`Skill removed from user ${userId}: ${userSkillId}`);
     return { success: true };
   }
 

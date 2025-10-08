@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { userService } from '@/services/api/user.service';
@@ -13,7 +13,8 @@ import type {
   CreateExperienceRequest
 } from '@/types/user';
 import Navigation from '@/components/Navigation';
-import { MapPin, DollarSign, Briefcase, Calendar, ExternalLink, Plus, X, Edit2, Check } from 'lucide-react';
+import { MapPin, DollarSign, Briefcase, Calendar, ExternalLink, Plus, X, Edit2, Check, Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { searchSkills } from '@/data/skills';
 
 export default function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -27,10 +28,20 @@ export default function ProfilePage() {
   
   const [formData, setFormData] = useState<UpdateProfileRequest>({});
   
+  // Image upload state
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  // @ts-ignore - will be used when backend upload is implemented
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // Skills state
   const [skills, setSkills] = useState<UserSkill[]>([]);
   const [newSkill, setNewSkill] = useState<AddSkillRequest>({ skillName: '' });
   const [showSkillForm, setShowSkillForm] = useState(false);
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isGeneratingSkills, setIsGeneratingSkills] = useState(false);
+  const skillInputRef = useRef<HTMLInputElement>(null);
   
   // Portfolio state
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
@@ -43,6 +54,10 @@ export default function ProfilePage() {
     workUrls: '',
     mediaFile: ''
   });
+  const [portfolioImagePreview, setPortfolioImagePreview] = useState<string | null>(null);
+  // @ts-ignore - will be used when backend upload is implemented
+  const [portfolioImageFile, setPortfolioImageFile] = useState<File | null>(null);
+  const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   
   // Experience state
   const [experience, setExperience] = useState<WorkExperience[]>([]);
@@ -99,11 +114,19 @@ export default function ProfilePage() {
     
     try {
       setError(null);
-      const updatedUser = await userService.updateProfile(formData);
+      
+      // Include avatar preview (base64) if available
+      const updateData = {
+        ...formData,
+        ...(avatarPreview && { avatar: avatarPreview })
+      };
+      
+      const updatedUser = await userService.updateProfile(updateData);
       
       // Reload the full profile to get all data
       await loadProfile();
       setIsEditing(false);
+      setAvatarPreview(null);
       
       // Update auth store if editing own profile
       if (isOwnProfile && currentUser) {
@@ -124,7 +147,140 @@ export default function ProfilePage() {
     }));
   };
 
+  // Image upload handlers
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAvatarDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePortfolioImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPortfolioImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPortfolioImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePortfolioImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setPortfolioImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPortfolioImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Skills handlers
+  const handleSkillInputChange = (value: string) => {
+    setNewSkill({ skillName: value });
+    
+    if (value.length >= 2) {
+      const suggestions = searchSkills(value, 8);
+      setSkillSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setSkillSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectSkill = (skillName: string) => {
+    setNewSkill({ skillName });
+    setShowSuggestions(false);
+    setSkillSuggestions([]);
+  };
+
+  const handleGenerateSkills = async () => {
+    if (!profile?.bio || profile.bio.trim().length < 10) {
+      setError('Please add a bio first to generate AI skills');
+      return;
+    }
+
+    setIsGeneratingSkills(true);
+    setError(null);
+    
+    try {
+      // Call AI API to generate contextual skills
+      const response = await fetch('/api/ai/generate-skills', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          bio: profile.bio,
+          existingSkills: skills.map(s => s.skill.name)
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate skills');
+      }
+
+      const data = await response.json();
+      const suggestedSkills = data.data?.suggestedSkills || [];
+
+      if (suggestedSkills.length === 0) {
+        setError('No new relevant skills found. Try adding more details to your bio.');
+        return;
+      }
+
+      // Add skills one by one
+      let addedCount = 0;
+      for (const skillName of suggestedSkills) {
+        try {
+          const skill = await userService.addSkill({ skillName });
+          setSkills(prev => [...prev, skill]);
+          addedCount++;
+        } catch (err) {
+          // Skip if skill already exists or error
+          console.log(`Skipped adding ${skillName}:`, err);
+        }
+        }
+        
+        if (addedCount > 0) {
+          // Show success message in green
+          const successMsg = `✨ Added ${addedCount} skill${addedCount > 1 ? 's' : ''} from your bio!`;
+          setError(successMsg);
+        } else {
+          setError('Skills already exist or could not be added.');
+        }
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate skills');
+    } finally {
+      setIsGeneratingSkills(false);
+    }
+  };
+
   const handleAddSkill = async () => {
     if (!newSkill.skillName.trim()) return;
     
@@ -133,6 +289,8 @@ export default function ProfilePage() {
       setSkills([...skills, skill]);
       setNewSkill({ skillName: '' });
       setShowSkillForm(false);
+      setShowSuggestions(false);
+      setSkillSuggestions([]);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add skill');
     }
@@ -152,7 +310,13 @@ export default function ProfilePage() {
     if (!portfolioForm.name.trim()) return;
     
     try {
-      const item = await userService.addPortfolioItem(portfolioForm);
+      // Include portfolio image preview (base64) if available
+      const portfolioData = {
+        ...portfolioForm,
+        ...(portfolioImagePreview && { mediaFile: portfolioImagePreview })
+      };
+      
+      const item = await userService.addPortfolioItem(portfolioData);
       setPortfolio([...portfolio, item]);
       setPortfolioForm({ 
         name: '', 
@@ -162,6 +326,7 @@ export default function ProfilePage() {
         workUrls: '', 
         mediaFile: '' 
       });
+      setPortfolioImagePreview(null);
       setShowPortfolioForm(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add portfolio item');
@@ -237,13 +402,22 @@ export default function ProfilePage() {
       <div className="pt-24 pb-16 px-8">
         <div className="max-w-[1400px] mx-auto">
           {error && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className={`mb-8 p-4 rounded-lg ${
+              error.startsWith('✨') 
+                ? 'bg-green-50 border border-green-200' 
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              <p className={`text-sm ${
+                error.startsWith('✨') 
+                  ? 'text-green-700' 
+                  : 'text-red-700'
+              }`}>{error}</p>
             </div>
           )}
 
           {/* Profile Header */}
-          <div className="flex items-start justify-between mb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-16 mb-16">
+            {/* Left: Intro */}
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <h1 className="text-[64px] font-bold tracking-tight leading-none">
@@ -266,6 +440,17 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex items-center gap-8 pt-4">
+                {/* Profile Photo - Small, clean */}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center overflow-hidden">
+                  {profile.avatar ? (
+                    <img src={profile.avatar} alt={`${profile.firstName} ${profile.lastName}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-bold text-gray-600">
+                      {profile.firstName[0]}{profile.lastName[0]}
+                    </span>
+                  )}
+                </div>
+                
                 {profile.location && (
                   <div className="flex items-center gap-2 text-foreground">
                     <MapPin className="w-4 h-4" />
@@ -291,6 +476,52 @@ export default function ProfilePage() {
                 <p className="mt-8 text-lg text-muted-foreground max-w-2xl leading-relaxed">
                   {profile.bio}
                 </p>
+              )}
+            </div>
+
+            {/* Right: Stats Card */}
+            <div className="space-y-8">
+              {/* Stats Grid - Awwwards Style */}
+              <div className="border border-border rounded-2xl overflow-hidden">
+                {/* Header */}
+                <div className="grid grid-cols-4 border-b border-border bg-gray-50">
+                  <div className="px-4 py-3 text-center border-r border-border">
+                    <span className="text-xs font-semibold uppercase tracking-wider">Works</span>
+                  </div>
+                  <div className="px-4 py-3 text-center border-r border-border">
+                    <span className="text-xs font-semibold uppercase tracking-wider">SOTM</span>
+                  </div>
+                  <div className="px-4 py-3 text-center border-r border-border">
+                    <span className="text-xs font-semibold uppercase tracking-wider">SOTD</span>
+                  </div>
+                  <div className="px-4 py-3 text-center">
+                    <span className="text-xs font-semibold uppercase tracking-wider">HM</span>
+                  </div>
+                </div>
+                
+                {/* Values */}
+                <div className="grid grid-cols-4 bg-white">
+                  <div className="px-4 py-6 text-center border-r border-border">
+                    <span className="text-4xl font-bold">{portfolio.length || 0}</span>
+                  </div>
+                  <div className="px-4 py-6 text-center border-r border-border">
+                    <span className="text-4xl font-bold">0</span>
+                  </div>
+                  <div className="px-4 py-6 text-center border-r border-border">
+                    <span className="text-4xl font-bold">0</span>
+                  </div>
+                  <div className="px-4 py-6 text-center">
+                    <span className="text-4xl font-bold">0</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Daily Rate */}
+              {profile.hourlyRate && (
+                <div className="text-center p-6 border border-border rounded-2xl bg-white">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Daily Rate</p>
+                  <p className="text-3xl font-bold">${(profile.hourlyRate * 8).toFixed(0)}</p>
+                </div>
               )}
             </div>
           </div>
@@ -325,6 +556,49 @@ export default function ProfilePage() {
                       className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
+                </div>
+
+                {/* Profile Photo Upload */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Profile Photo
+                  </label>
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer"
+                    onDrop={handleAvatarDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {avatarPreview || profile?.avatar ? (
+                      <div className="space-y-4">
+                        <img
+                          src={avatarPreview || profile?.avatar}
+                          alt="Profile preview"
+                          className="w-32 h-32 rounded-full mx-auto object-cover"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Click or drag to change photo
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Click to upload or drag and drop
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          PNG, JPG up to 5MB
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
                 </div>
 
                 <div>
@@ -411,26 +685,59 @@ export default function ProfilePage() {
           <div className="mb-24">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold">Skills</h2>
-              {isOwnProfile && !showSkillForm && (
-                <button
-                  onClick={() => setShowSkillForm(true)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              )}
+              <div className="flex gap-2">
+                {isOwnProfile && profile?.bio && (
+                  <button
+                    onClick={handleGenerateSkills}
+                    disabled={isGeneratingSkills}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm">{isGeneratingSkills ? 'Generating...' : 'AI Generate'}</span>
+                  </button>
+                )}
+                {isOwnProfile && !showSkillForm && (
+                  <button
+                    onClick={() => setShowSkillForm(true)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {showSkillForm && (
               <div className="mb-8 p-6 bg-white rounded-2xl border border-border">
-                <div className="flex gap-4">
-                  <input
-                    type="text"
-                    value={newSkill.skillName}
-                    onChange={(e) => setNewSkill({ skillName: e.target.value })}
-                    placeholder="Skill name (e.g., React, TypeScript, Design)"
-                    className="flex-1 px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                <div className="flex gap-4 relative">
+                  <div className="flex-1 relative">
+                    <input
+                      ref={skillInputRef}
+                      type="text"
+                      value={newSkill.skillName}
+                      onChange={(e) => handleSkillInputChange(e.target.value)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                      onFocus={() => newSkill.skillName.length >= 2 && setShowSuggestions(true)}
+                      placeholder="Type skill name (e.g., React, TypeScript, Design)"
+                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    
+                    {/* Autocomplete Dropdown */}
+                    {showSuggestions && skillSuggestions.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {skillSuggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleSelectSkill(suggestion)}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-100 transition-colors text-sm"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
                   <button
                     onClick={handleAddSkill}
                     className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -438,12 +745,20 @@ export default function ProfilePage() {
                     Add
                   </button>
                   <button
-                    onClick={() => setShowSkillForm(false)}
+                    onClick={() => {
+                      setShowSkillForm(false);
+                      setShowSuggestions(false);
+                      setNewSkill({ skillName: '' });
+                    }}
                     className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
+                
+                <p className="mt-3 text-xs text-muted-foreground">
+                  💡 Tip: Type at least 2 characters to see skill suggestions
+                </p>
               </div>
             )}
 
@@ -457,10 +772,14 @@ export default function ProfilePage() {
                     <span className="text-sm font-medium">{userSkill.skill.name}</span>
                     {isOwnProfile && (
                       <button
-                        onClick={() => handleRemoveSkill(userSkill.id)}
-                        className="ml-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveSkill(userSkill.id);
+                        }}
+                        className="ml-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-all"
+                        title="Remove skill"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-3 h-3 text-red-600" />
                       </button>
                     )}
                   </div>
@@ -523,13 +842,50 @@ export default function ProfilePage() {
                     placeholder="Project URL (optional)"
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   />
-                  <input
-                    type="url"
-                    value={portfolioForm.mediaFile}
-                    onChange={(e) => setPortfolioForm({ ...portfolioForm, mediaFile: e.target.value })}
-                    placeholder="Image/Media URL (optional)"
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                  
+                  {/* Portfolio Image Upload */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Project Image
+                    </label>
+                    <div
+                      className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer"
+                      onDrop={handlePortfolioImageDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                      onClick={() => portfolioFileInputRef.current?.click()}
+                    >
+                      {portfolioImagePreview ? (
+                        <div className="space-y-3">
+                          <img
+                            src={portfolioImagePreview}
+                            alt="Portfolio preview"
+                            className="w-full h-48 mx-auto object-cover rounded-lg"
+                          />
+                          <p className="text-sm text-muted-foreground">
+                            Click or drag to change image
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            Click to upload or drag and drop
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PNG, JPG up to 5MB
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      ref={portfolioFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePortfolioImageChange}
+                      className="hidden"
+                    />
+                  </div>
+                  
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={handleAddPortfolio}

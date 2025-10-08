@@ -194,12 +194,12 @@ export default function FreelancersPage() {
                         {/* Skills */}
                         {freelancer.skills && freelancer.skills.length > 0 && (
                           <div className="flex flex-wrap gap-2 justify-center">
-                            {freelancer.skills.slice(0, 3).map((skill) => (
+                            {freelancer.skills.slice(0, 3).map((userSkill) => (
                               <span
-                                key={skill.id}
+                                key={userSkill.id}
                                 className="px-3 py-1 rounded-full bg-muted text-foreground text-xs font-medium border border-border"
                               >
-                                {skill.name}
+                                {userSkill.skill.name}
                               </span>
                             ))}
                             {freelancer.skills.length > 3 && (

@@ -9,7 +9,7 @@ export interface User {
   role: UserRole;
   bio?: string;
   location?: string;
-  avatarUrl?: string;
+  avatar?: string;
   available: boolean;
   hourlyRate?: number;
   createdAt: string;

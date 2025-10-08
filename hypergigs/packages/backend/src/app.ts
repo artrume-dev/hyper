@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import invitationRoutes from './routes/invitation.routes.js';
+import aiRoutes from './routes/ai.routes.js';
 
 // Create Express app
 export const app = express();
@@ -44,8 +45,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // Health check
@@ -73,6 +74,9 @@ app.use('/api/teams', teamRoutes);
 
 // Invitation routes
 app.use('/api/invitations', invitationRoutes);
+
+// AI routes
+app.use('/api/ai', aiRoutes);
 
 // Error handling
 app.use(notFoundHandler);

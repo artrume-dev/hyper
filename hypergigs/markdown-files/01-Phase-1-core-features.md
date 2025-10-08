@@ -26,6 +26,12 @@
 - [ ] Basic invitation flow functional
 - [ ] Dashboards display relevant data
 - [ ] Search functionality working
+- [ ] Profile enhancements completed (Task 1.6.x)
+  - [ ] Skills management with AI generation
+  - [ ] Portfolio with multiple images
+  - [ ] Project detail pages
+  - [ ] Clean username-based URLs
+  - [ ] Global footer
 
 ---
 

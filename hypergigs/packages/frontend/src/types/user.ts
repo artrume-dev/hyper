@@ -52,6 +52,7 @@ export interface UpdateProfileRequest {
   location?: string;
   hourlyRate?: number;
   available?: boolean;
+  avatar?: string;
 }
 
 export interface AddSkillRequest {

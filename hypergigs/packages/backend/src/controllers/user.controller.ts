@@ -33,7 +33,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const { firstName, lastName, username, bio, location, available, nextAvailability } = req.body;
+    const { firstName, lastName, username, bio, location, available, nextAvailability, avatar } = req.body;
 
     const user = await userService.updateProfile(req.userId, {
       firstName,
@@ -43,6 +43,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       location,
       available,
       nextAvailability: nextAvailability ? new Date(nextAvailability) : undefined,
+      avatar,
     });
 
     res.status(200).json({ user });
@@ -154,9 +155,9 @@ export const removeSkill = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const { skillId } = req.params;
+    const { userSkillId } = req.params;
 
-    await userService.removeSkill(req.userId, skillId);
+    await userService.removeSkill(req.userId, userSkillId);
 
     res.status(200).json({ message: 'Skill removed successfully' });
   } catch (error) {
