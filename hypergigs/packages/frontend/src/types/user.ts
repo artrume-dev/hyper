@@ -3,18 +3,24 @@ import type { User } from './auth';
 export interface Skill {
   id: string;
   name: string;
-  level?: string;
+  category?: string;
+}
+
+export interface UserSkill {
+  id: string;
   userId: string;
-  createdAt: string;
+  skillId: string;
+  skill: Skill;
 }
 
 export interface PortfolioItem {
   id: string;
-  title: string;
+  name: string;
   description?: string;
-  url?: string;
-  imageUrl?: string;
-  tags?: string[];
+  companyName?: string;
+  role?: string;
+  workUrls?: string;
+  mediaFile?: string;
   userId: string;
   createdAt: string;
   updatedAt: string;
@@ -24,20 +30,19 @@ export interface WorkExperience {
   id: string;
   title: string;
   company: string;
-  location?: string;
+  description?: string;
   startDate: string;
   endDate?: string;
-  current: boolean;
-  description?: string;
+  present: boolean;
   userId: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface UserProfile extends User {
-  skills?: Skill[];
-  portfolio?: PortfolioItem[];
-  experience?: WorkExperience[];
+  skills?: UserSkill[];
+  portfolios?: PortfolioItem[];
+  workExperiences?: WorkExperience[];
 }
 
 export interface UpdateProfileRequest {
@@ -50,44 +55,43 @@ export interface UpdateProfileRequest {
 }
 
 export interface AddSkillRequest {
-  name: string;
-  level?: string;
+  skillName: string;
 }
 
 export interface CreatePortfolioRequest {
-  title: string;
+  name: string;
   description?: string;
-  url?: string;
-  imageUrl?: string;
-  tags?: string[];
+  companyName?: string;
+  role?: string;
+  workUrls?: string;
+  mediaFile?: string;
 }
 
 export interface UpdatePortfolioRequest {
-  title?: string;
+  name?: string;
   description?: string;
-  url?: string;
-  imageUrl?: string;
-  tags?: string[];
+  companyName?: string;
+  role?: string;
+  workUrls?: string;
+  mediaFile?: string;
 }
 
 export interface CreateExperienceRequest {
   title: string;
   company: string;
-  location?: string;
+  description?: string;
   startDate: string;
   endDate?: string;
-  current: boolean;
-  description?: string;
+  present: boolean;
 }
 
 export interface UpdateExperienceRequest {
   title?: string;
   company?: string;
-  location?: string;
+  description?: string;
   startDate?: string;
   endDate?: string;
-  current?: boolean;
-  description?: string;
+  present?: boolean;
 }
 
 export interface SearchUsersFilters {

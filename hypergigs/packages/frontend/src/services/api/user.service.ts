@@ -3,7 +3,7 @@ import type {
   UserProfile,
   UpdateProfileRequest,
   AddSkillRequest,
-  Skill,
+  UserSkill,
   CreatePortfolioRequest,
   UpdatePortfolioRequest,
   PortfolioItem,
@@ -65,8 +65,8 @@ export const userService = {
   /**
    * Add skill
    */
-  async addSkill(data: AddSkillRequest): Promise<Skill> {
-    const response = await api.post<{ skill: Skill }>('/api/users/me/skills', data);
+  async addSkill(data: AddSkillRequest): Promise<UserSkill> {
+    const response = await api.post<{ skill: UserSkill }>('/api/users/me/skills', data);
     return response.data.skill;
   },
 
@@ -125,10 +125,10 @@ export const userService = {
    * Get user work experience
    */
   async getExperience(userId: string): Promise<WorkExperience[]> {
-    const response = await api.get<{ experience: WorkExperience[] }>(
+    const response = await api.get<{ experiences: WorkExperience[] }>(
       `/api/users/${userId}/experience`
     );
-    return response.data.experience;
+    return response.data.experiences;
   },
 
   /**

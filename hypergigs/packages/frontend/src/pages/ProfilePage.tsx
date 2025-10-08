@@ -5,7 +5,7 @@ import { userService } from '@/services/api/user.service';
 import type { 
   UserProfile, 
   UpdateProfileRequest, 
-  Skill, 
+  UserSkill, 
   PortfolioItem, 
   WorkExperience,
   AddSkillRequest,
@@ -28,19 +28,20 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState<UpdateProfileRequest>({});
   
   // Skills state
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [newSkill, setNewSkill] = useState<AddSkillRequest>({ name: '', level: 'Intermediate' });
+  const [skills, setSkills] = useState<UserSkill[]>([]);
+  const [newSkill, setNewSkill] = useState<AddSkillRequest>({ skillName: '' });
   const [showSkillForm, setShowSkillForm] = useState(false);
   
   // Portfolio state
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [showPortfolioForm, setShowPortfolioForm] = useState(false);
   const [portfolioForm, setPortfolioForm] = useState<CreatePortfolioRequest>({
-    title: '',
+    name: '',
     description: '',
-    url: '',
-    imageUrl: '',
-    tags: []
+    companyName: '',
+    role: '',
+    workUrls: '',
+    mediaFile: ''
   });
   
   // Experience state
@@ -49,11 +50,10 @@ export default function ProfilePage() {
   const [experienceForm, setExperienceForm] = useState<CreateExperienceRequest>({
     title: '',
     company: '',
-    location: '',
+    description: '',
     startDate: '',
     endDate: '',
-    current: false,
-    description: ''
+    present: false
   });
 
   const isOwnProfile = !userId || userId === currentUser?.id;
@@ -76,8 +76,8 @@ export default function ProfilePage() {
       const data = await userService.getUserProfile(profileId);
       setProfile(data);
       setSkills(data.skills || []);
-      setPortfolio(data.portfolio || []);
-      setExperience(data.experience || []);
+      setPortfolio(data.portfolios || []);
+      setExperience(data.workExperiences || []);
       
       setFormData({
         firstName: data.firstName,
@@ -126,22 +126,22 @@ export default function ProfilePage() {
 
   // Skills handlers
   const handleAddSkill = async () => {
-    if (!newSkill.name.trim()) return;
+    if (!newSkill.skillName.trim()) return;
     
     try {
       const skill = await userService.addSkill(newSkill);
       setSkills([...skills, skill]);
-      setNewSkill({ name: '', level: 'Intermediate' });
+      setNewSkill({ skillName: '' });
       setShowSkillForm(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add skill');
     }
   };
 
-  const handleRemoveSkill = async (skillId: string) => {
+  const handleRemoveSkill = async (userSkillId: string) => {
     try {
-      await userService.removeSkill(skillId);
-      setSkills(skills.filter(s => s.id !== skillId));
+      await userService.removeSkill(userSkillId);
+      setSkills(skills.filter(s => s.id !== userSkillId));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to remove skill');
     }
@@ -149,12 +149,19 @@ export default function ProfilePage() {
 
   // Portfolio handlers
   const handleAddPortfolio = async () => {
-    if (!portfolioForm.title.trim()) return;
+    if (!portfolioForm.name.trim()) return;
     
     try {
       const item = await userService.addPortfolioItem(portfolioForm);
       setPortfolio([...portfolio, item]);
-      setPortfolioForm({ title: '', description: '', url: '', imageUrl: '', tags: [] });
+      setPortfolioForm({ 
+        name: '', 
+        description: '', 
+        companyName: '', 
+        role: '', 
+        workUrls: '', 
+        mediaFile: '' 
+      });
       setShowPortfolioForm(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add portfolio item');
@@ -172,7 +179,7 @@ export default function ProfilePage() {
 
   // Experience handlers
   const handleAddExperience = async () => {
-    if (!experienceForm.title.trim() || !experienceForm.company.trim()) return;
+    if (!experienceForm.title.trim() || !experienceForm.company.trim() || !experienceForm.startDate) return;
     
     try {
       const exp = await userService.addExperience(experienceForm);
@@ -180,11 +187,10 @@ export default function ProfilePage() {
       setExperienceForm({
         title: '',
         company: '',
-        location: '',
+        description: '',
         startDate: '',
         endDate: '',
-        current: false,
-        description: ''
+        present: false
       });
       setShowExperienceForm(false);
     } catch (err: any) {
@@ -420,21 +426,11 @@ export default function ProfilePage() {
                 <div className="flex gap-4">
                   <input
                     type="text"
-                    value={newSkill.name}
-                    onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
-                    placeholder="Skill name"
+                    value={newSkill.skillName}
+                    onChange={(e) => setNewSkill({ skillName: e.target.value })}
+                    placeholder="Skill name (e.g., React, TypeScript, Design)"
                     className="flex-1 px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   />
-                  <select
-                    value={newSkill.level}
-                    onChange={(e) => setNewSkill({ ...newSkill, level: e.target.value })}
-                    className="px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                    <option value="Expert">Expert</option>
-                  </select>
                   <button
                     onClick={handleAddSkill}
                     className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -453,21 +449,15 @@ export default function ProfilePage() {
 
             <div className="flex flex-wrap gap-3">
               {skills.length > 0 ? (
-                skills.map((skill) => (
+                skills.map((userSkill) => (
                   <div
-                    key={skill.id}
+                    key={userSkill.id}
                     className="group px-4 py-2 bg-white rounded-lg border border-border hover:border-primary transition-colors flex items-center gap-2"
                   >
-                    <span className="text-sm font-medium">{skill.name}</span>
-                    {skill.level && (
-                      <>
-                        <span className="text-gray-300">•</span>
-                        <span className="text-xs text-muted-foreground">{skill.level}</span>
-                      </>
-                    )}
+                    <span className="text-sm font-medium">{userSkill.skill.name}</span>
                     {isOwnProfile && (
                       <button
-                        onClick={() => handleRemoveSkill(skill.id)}
+                        onClick={() => handleRemoveSkill(userSkill.id)}
                         className="ml-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all"
                       >
                         <X className="w-3 h-3" />
@@ -500,9 +490,9 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <input
                     type="text"
-                    value={portfolioForm.title}
-                    onChange={(e) => setPortfolioForm({ ...portfolioForm, title: e.target.value })}
-                    placeholder="Project title"
+                    value={portfolioForm.name}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, name: e.target.value })}
+                    placeholder="Project name"
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <textarea
@@ -513,17 +503,31 @@ export default function ProfilePage() {
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   />
                   <input
+                    type="text"
+                    value={portfolioForm.companyName}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, companyName: e.target.value })}
+                    placeholder="Company name (optional)"
+                    className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <input
+                    type="text"
+                    value={portfolioForm.role}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, role: e.target.value })}
+                    placeholder="Your role (optional)"
+                    className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <input
                     type="url"
-                    value={portfolioForm.url}
-                    onChange={(e) => setPortfolioForm({ ...portfolioForm, url: e.target.value })}
+                    value={portfolioForm.workUrls}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, workUrls: e.target.value })}
                     placeholder="Project URL (optional)"
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <input
                     type="url"
-                    value={portfolioForm.imageUrl}
-                    onChange={(e) => setPortfolioForm({ ...portfolioForm, imageUrl: e.target.value })}
-                    placeholder="Image URL (optional)"
+                    value={portfolioForm.mediaFile}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, mediaFile: e.target.value })}
+                    placeholder="Image/Media URL (optional)"
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <div className="flex gap-3 pt-2">
@@ -551,26 +555,31 @@ export default function ProfilePage() {
                     key={item.id}
                     className="group relative bg-white rounded-2xl border border-border overflow-hidden hover:border-primary transition-all hover:shadow-lg"
                   >
-                    {item.imageUrl && (
+                    {item.mediaFile && (
                       <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
                         <img
-                          src={item.imageUrl}
-                          alt={item.title}
+                          src={item.mediaFile}
+                          alt={item.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                     )}
                     <div className="p-6">
-                      <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                      <h3 className="text-xl font-bold mb-2">{item.name}</h3>
+                      {item.companyName && (
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {item.companyName} {item.role && `• ${item.role}`}
+                        </p>
+                      )}
                       {item.description && (
                         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                           {item.description}
                         </p>
                       )}
                       <div className="flex items-center justify-between">
-                        {item.url && (
+                        {item.workUrls && (
                           <a
-                            href={item.url}
+                            href={item.workUrls}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-primary hover:underline flex items-center gap-1"
@@ -630,33 +639,28 @@ export default function ProfilePage() {
                       className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
-                  <input
-                    type="text"
-                    value={experienceForm.location}
-                    onChange={(e) => setExperienceForm({ ...experienceForm, location: e.target.value })}
-                    placeholder="Location (optional)"
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       type="date"
                       value={experienceForm.startDate}
                       onChange={(e) => setExperienceForm({ ...experienceForm, startDate: e.target.value })}
+                      placeholder="Start date"
                       className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <input
                       type="date"
                       value={experienceForm.endDate}
                       onChange={(e) => setExperienceForm({ ...experienceForm, endDate: e.target.value })}
-                      disabled={experienceForm.current}
+                      disabled={experienceForm.present}
+                      placeholder="End date"
                       className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                     />
                   </div>
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={experienceForm.current}
-                      onChange={(e) => setExperienceForm({ ...experienceForm, current: e.target.checked, endDate: e.target.checked ? '' : experienceForm.endDate })}
+                      checked={experienceForm.present}
+                      onChange={(e) => setExperienceForm({ ...experienceForm, present: e.target.checked, endDate: e.target.checked ? '' : experienceForm.endDate })}
                       className="rounded border-border"
                     />
                     <span className="text-sm">I currently work here</span>
@@ -717,17 +721,8 @@ export default function ProfilePage() {
                           <Calendar className="w-3 h-3" />
                           {new Date(exp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                           {' - '}
-                          {exp.current ? 'Present' : new Date(exp.endDate || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                          {exp.present ? 'Present' : new Date(exp.endDate || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                         </span>
-                        {exp.location && (
-                          <>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {exp.location}
-                            </span>
-                          </>
-                        )}
                       </div>
                       {exp.description && (
                         <p className="text-muted-foreground">{exp.description}</p>
