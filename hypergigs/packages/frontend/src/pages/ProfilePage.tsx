@@ -59,6 +59,19 @@ export default function ProfilePage() {
   const [portfolioImageFile, setPortfolioImageFile] = useState<File | null>(null);
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   
+  // Portfolio edit state
+  const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
+  const [editPortfolioForm, setEditPortfolioForm] = useState<CreatePortfolioRequest>({
+    name: '',
+    description: '',
+    companyName: '',
+    role: '',
+    workUrls: '',
+    mediaFile: ''
+  });
+  const [editPortfolioImagePreview, setEditPortfolioImagePreview] = useState<string | null>(null);
+  const editPortfolioFileInputRef = useRef<HTMLInputElement>(null);
+  
   // Experience state
   const [experience, setExperience] = useState<WorkExperience[]>([]);
   const [showExperienceForm, setShowExperienceForm] = useState(false);
@@ -343,6 +356,85 @@ export default function ProfilePage() {
       setPortfolio(portfolio.filter(p => p.id !== portfolioId));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete portfolio item');
+    }
+  };
+
+  const handleEditPortfolio = (item: PortfolioItem) => {
+    setEditingPortfolioId(item.id);
+    setEditPortfolioForm({
+      name: item.name,
+      description: item.description || '',
+      companyName: item.companyName || '',
+      role: item.role || '',
+      workUrls: item.workUrls || '',
+      mediaFile: item.mediaFile || ''
+    });
+    setEditPortfolioImagePreview(item.mediaFile || null);
+    // Close add form if open
+    setShowPortfolioForm(false);
+  };
+
+  const handleUpdatePortfolio = async (portfolioId: string) => {
+    if (!editPortfolioForm.name.trim()) return;
+    
+    try {
+      const portfolioData = {
+        ...editPortfolioForm,
+        ...(editPortfolioImagePreview && editPortfolioImagePreview !== editPortfolioForm.mediaFile && { 
+          mediaFile: editPortfolioImagePreview 
+        })
+      };
+      
+      const updated = await userService.updatePortfolioItem(portfolioId, portfolioData);
+      setPortfolio(portfolio.map(p => p.id === portfolioId ? updated : p));
+      setEditingPortfolioId(null);
+      setEditPortfolioForm({
+        name: '',
+        description: '',
+        companyName: '',
+        role: '',
+        workUrls: '',
+        mediaFile: ''
+      });
+      setEditPortfolioImagePreview(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update portfolio item');
+    }
+  };
+
+  const handleCancelEditPortfolio = () => {
+    setEditingPortfolioId(null);
+    setEditPortfolioForm({
+      name: '',
+      description: '',
+      companyName: '',
+      role: '',
+      workUrls: '',
+      mediaFile: ''
+    });
+    setEditPortfolioImagePreview(null);
+  };
+
+  const handleEditPortfolioImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditPortfolioImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditPortfolioImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditPortfolioImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -912,49 +1004,153 @@ export default function ProfilePage() {
                     key={item.id}
                     className="group relative bg-white rounded-2xl border border-border overflow-hidden hover:border-primary transition-all hover:shadow-lg"
                   >
-                    {item.mediaFile && (
-                      <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
-                        <img
-                          src={item.mediaFile}
-                          alt={item.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+                    {editingPortfolioId === item.id ? (
+                      /* Edit Mode */
+                      <div className="p-6">
+                        <div className="space-y-4">
+                          <input
+                            type="text"
+                            value={editPortfolioForm.name}
+                            onChange={(e) => setEditPortfolioForm({ ...editPortfolioForm, name: e.target.value })}
+                            placeholder="Project name"
+                            className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <textarea
+                            value={editPortfolioForm.description}
+                            onChange={(e) => setEditPortfolioForm({ ...editPortfolioForm, description: e.target.value })}
+                            placeholder="Description"
+                            rows={3}
+                            className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                          />
+                          <input
+                            type="text"
+                            value={editPortfolioForm.companyName}
+                            onChange={(e) => setEditPortfolioForm({ ...editPortfolioForm, companyName: e.target.value })}
+                            placeholder="Company name"
+                            className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <input
+                            type="text"
+                            value={editPortfolioForm.role}
+                            onChange={(e) => setEditPortfolioForm({ ...editPortfolioForm, role: e.target.value })}
+                            placeholder="Your role"
+                            className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <input
+                            type="url"
+                            value={editPortfolioForm.workUrls}
+                            onChange={(e) => setEditPortfolioForm({ ...editPortfolioForm, workUrls: e.target.value })}
+                            placeholder="Project URL"
+                            className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          
+                          {/* Edit Portfolio Image */}
+                          <div>
+                            <div
+                              className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer"
+                              onDrop={handleEditPortfolioImageDrop}
+                              onDragOver={(e) => e.preventDefault()}
+                              onClick={() => editPortfolioFileInputRef.current?.click()}
+                            >
+                              {editPortfolioImagePreview ? (
+                                <div className="space-y-2">
+                                  <img
+                                    src={editPortfolioImagePreview}
+                                    alt="Portfolio preview"
+                                    className="w-full h-32 mx-auto object-cover rounded-lg"
+                                  />
+                                  <p className="text-xs text-muted-foreground">Click to change</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground" />
+                                  <p className="text-xs text-muted-foreground">Click to upload image</p>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              ref={editPortfolioFileInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleEditPortfolioImageChange}
+                              className="hidden"
+                            />
+                          </div>
+                          
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => handleUpdatePortfolio(item.id)}
+                              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={handleCancelEditPortfolio}
+                              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
                       </div>
+                    ) : (
+                      /* Display Mode */
+                      <>
+                        {item.mediaFile && (
+                          <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+                            <img
+                              src={item.mediaFile}
+                              alt={item.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                        )}
+                        <div className="p-6">
+                          <h3 className="text-xl font-bold mb-2">{item.name}</h3>
+                          {item.companyName && (
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {item.companyName} {item.role && `• ${item.role}`}
+                            </p>
+                          )}
+                          {item.description && (
+                            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between">
+                            {item.workUrls && (
+                              <a
+                                href={item.workUrls}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-primary hover:underline flex items-center gap-1"
+                              >
+                                View Project
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            {isOwnProfile && (
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleEditPortfolio(item)}
+                                  className="p-2 opacity-0 group-hover:opacity-100 hover:bg-blue-50 rounded-lg transition-all"
+                                  title="Edit project"
+                                >
+                                  <Edit2 className="w-4 h-4 text-blue-600" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePortfolio(item.id)}
+                                  className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg transition-all"
+                                  title="Delete project"
+                                >
+                                  <X className="w-4 h-4 text-red-600" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
                     )}
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold mb-2">{item.name}</h3>
-                      {item.companyName && (
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {item.companyName} {item.role && `• ${item.role}`}
-                        </p>
-                      )}
-                      {item.description && (
-                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                          {item.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between">
-                        {item.workUrls && (
-                          <a
-                            href={item.workUrls}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-primary hover:underline flex items-center gap-1"
-                          >
-                            View Project
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                        {isOwnProfile && (
-                          <button
-                            onClick={() => handleDeletePortfolio(item.id)}
-                            className="p-2 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded-lg transition-all"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 ))
               ) : (
