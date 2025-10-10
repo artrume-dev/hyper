@@ -13,8 +13,54 @@ import type {
   CreateExperienceRequest
 } from '@/types/user';
 import Navigation from '@/components/Navigation';
+import ProjectDrawer from '@/components/ProjectDrawer';
 import { MapPin, DollarSign, Briefcase, Calendar, ExternalLink, Plus, X, Edit2, Check, Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { searchSkills } from '@/data/skills';
+
+// Helper function to render text with line breaks and clickable links
+const formatRichText = (text: string) => {
+  if (!text) return null;
+  
+  // URL regex pattern
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  
+  // Split by line breaks first
+  const lines = text.split('\n');
+  
+  return lines.map((line, lineIndex) => {
+    if (!line.trim()) {
+      // Empty line - add spacing
+      return <br key={`br-${lineIndex}`} />;
+    }
+    
+    // Split line by URLs
+    const parts = line.split(urlRegex);
+    const elements = parts.map((part, partIndex) => {
+      // Check if part is a URL
+      if (urlRegex.test(part)) {
+        return (
+          <a
+            key={`link-${lineIndex}-${partIndex}`}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            {part}
+          </a>
+        );
+      }
+      return <span key={`text-${lineIndex}-${partIndex}`}>{part}</span>;
+    });
+    
+    return (
+      <span key={`line-${lineIndex}`}>
+        {elements}
+        {lineIndex < lines.length - 1 && <br />}
+      </span>
+    );
+  });
+};
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -52,12 +98,12 @@ export default function ProfilePage() {
     companyName: '',
     role: '',
     workUrls: '',
-    mediaFile: ''
+    mediaFiles: []
   });
-  const [portfolioImagePreview, setPortfolioImagePreview] = useState<string | null>(null);
-  // @ts-ignore - will be used when backend upload is implemented
-  const [portfolioImageFile, setPortfolioImageFile] = useState<File | null>(null);
+  const [portfolioImagePreviews, setPortfolioImagePreviews] = useState<string[]>([]);
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_PORTFOLIO_IMAGES = 4;
+  const MAX_IMAGE_SIZE = 500 * 1024; // 500KB
   
   // Portfolio edit state
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
@@ -67,10 +113,14 @@ export default function ProfilePage() {
     companyName: '',
     role: '',
     workUrls: '',
-    mediaFile: ''
+    mediaFiles: []
   });
-  const [editPortfolioImagePreview, setEditPortfolioImagePreview] = useState<string | null>(null);
+  const [editPortfolioImagePreviews, setEditPortfolioImagePreviews] = useState<string[]>([]);
   const editPortfolioFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Project drawer state
+  const [selectedProject, setSelectedProject] = useState<PortfolioItem | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   // Experience state
   const [experience, setExperience] = useState<WorkExperience[]>([]);
@@ -118,6 +168,7 @@ export default function ProfilePage() {
         location: data.location || '',
         hourlyRate: data.hourlyRate || 0,
         available: data.available,
+        nextAvailability: data.nextAvailability || '',
       });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load profile');
@@ -191,28 +242,53 @@ export default function ProfilePage() {
   };
 
   const handlePortfolioImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPortfolioImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPortfolioImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handlePortfolioImageFiles(Array.from(files));
     }
   };
 
   const handlePortfolioImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setPortfolioImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPortfolioImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      handlePortfolioImageFiles(imageFiles);
     }
+  };
+
+  const handlePortfolioImageFiles = async (files: File[]) => {
+    // Check max images limit
+    const remainingSlots = MAX_PORTFOLIO_IMAGES - portfolioImagePreviews.length;
+    if (remainingSlots <= 0) {
+      alert(`Maximum ${MAX_PORTFOLIO_IMAGES} images allowed`);
+      return;
+    }
+
+    const filesToProcess = files.slice(0, remainingSlots);
+    const newPreviews: string[] = [];
+
+    for (const file of filesToProcess) {
+      // Check file size
+      if (file.size > MAX_IMAGE_SIZE) {
+        alert(`Image ${file.name} is too large. Max size is 500KB`);
+        continue;
+      }
+
+      // Convert to base64
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      newPreviews.push(base64);
+    }
+
+    setPortfolioImagePreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  const removePortfolioImage = (index: number) => {
+    setPortfolioImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   // Skills handlers
@@ -246,7 +322,8 @@ export default function ProfilePage() {
     
     try {
       // Call AI API to generate contextual skills
-      const response = await fetch('/api/ai/generate-skills', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/ai/generate-skills`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -327,10 +404,10 @@ export default function ProfilePage() {
     if (!portfolioForm.name.trim()) return;
     
     try {
-      // Include portfolio image preview (base64) if available
+      // Include portfolio images (base64) if available
       const portfolioData = {
         ...portfolioForm,
-        ...(portfolioImagePreview && { mediaFile: portfolioImagePreview })
+        mediaFiles: portfolioImagePreviews
       };
       
       const item = await userService.addPortfolioItem(portfolioData);
@@ -341,9 +418,9 @@ export default function ProfilePage() {
         companyName: '', 
         role: '', 
         workUrls: '', 
-        mediaFile: '' 
+        mediaFiles: [] 
       });
-      setPortfolioImagePreview(null);
+      setPortfolioImagePreviews([]);
       setShowPortfolioForm(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add portfolio item');
@@ -367,9 +444,9 @@ export default function ProfilePage() {
       companyName: item.companyName || '',
       role: item.role || '',
       workUrls: item.workUrls || '',
-      mediaFile: item.mediaFile || ''
+      mediaFiles: item.mediaFiles || []
     });
-    setEditPortfolioImagePreview(item.mediaFile || null);
+    setEditPortfolioImagePreviews(item.mediaFiles || []);
     // Close add form if open
     setShowPortfolioForm(false);
   };
@@ -380,9 +457,7 @@ export default function ProfilePage() {
     try {
       const portfolioData = {
         ...editPortfolioForm,
-        ...(editPortfolioImagePreview && editPortfolioImagePreview !== editPortfolioForm.mediaFile && { 
-          mediaFile: editPortfolioImagePreview 
-        })
+        mediaFiles: editPortfolioImagePreviews
       };
       
       const updated = await userService.updatePortfolioItem(portfolioId, portfolioData);
@@ -394,9 +469,9 @@ export default function ProfilePage() {
         companyName: '',
         role: '',
         workUrls: '',
-        mediaFile: ''
+        mediaFiles: []
       });
-      setEditPortfolioImagePreview(null);
+      setEditPortfolioImagePreviews([]);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update portfolio item');
     }
@@ -410,32 +485,59 @@ export default function ProfilePage() {
       companyName: '',
       role: '',
       workUrls: '',
-      mediaFile: ''
+      mediaFiles: []
     });
-    setEditPortfolioImagePreview(null);
+    setEditPortfolioImagePreviews([]);
   };
 
   const handleEditPortfolioImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditPortfolioImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleEditPortfolioImageFiles(Array.from(files));
     }
   };
 
   const handleEditPortfolioImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditPortfolioImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      handleEditPortfolioImageFiles(imageFiles);
     }
+  };
+
+  const handleEditPortfolioImageFiles = async (files: File[]) => {
+    // Check max images limit
+    const remainingSlots = MAX_PORTFOLIO_IMAGES - editPortfolioImagePreviews.length;
+    if (remainingSlots <= 0) {
+      alert(`Maximum ${MAX_PORTFOLIO_IMAGES} images allowed`);
+      return;
+    }
+
+    const filesToProcess = files.slice(0, remainingSlots);
+    const newPreviews: string[] = [];
+
+    for (const file of filesToProcess) {
+      // Check file size
+      if (file.size > MAX_IMAGE_SIZE) {
+        alert(`Image ${file.name} is too large. Max size is 500KB`);
+        continue;
+      }
+
+      // Convert to base64
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      newPreviews.push(base64);
+    }
+
+    setEditPortfolioImagePreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  const removeEditPortfolioImage = (index: number) => {
+    setEditPortfolioImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   // Experience handlers
@@ -566,6 +668,18 @@ export default function ProfilePage() {
                 }`}>
                   {profile.available ? 'Available for work' : 'Unavailable'}
                 </div>
+                {!profile.available && profile.nextAvailability && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      Available from {new Date(profile.nextAvailability).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {profile.bio && !isEditing && (
@@ -750,6 +864,22 @@ export default function ProfilePage() {
                     <option value="false">Not available</option>
                   </select>
                 </div>
+
+                {/* Next Availability Date - only show if not available */}
+                {formData.available === false && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Next Available Date
+                    </label>
+                    <input
+                      type="date"
+                      name="nextAvailability"
+                      value={formData.nextAvailability ? new Date(formData.nextAvailability).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, nextAvailability: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-4">
                   <button
@@ -936,44 +1066,60 @@ export default function ProfilePage() {
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   
-                  {/* Portfolio Image Upload */}
+                  {/* Portfolio Images Upload */}
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Project Image
+                      Project Images ({portfolioImagePreviews.length}/{MAX_PORTFOLIO_IMAGES})
                     </label>
-                    <div
-                      className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer"
-                      onDrop={handlePortfolioImageDrop}
-                      onDragOver={(e) => e.preventDefault()}
-                      onClick={() => portfolioFileInputRef.current?.click()}
-                    >
-                      {portfolioImagePreview ? (
-                        <div className="space-y-3">
-                          <img
-                            src={portfolioImagePreview}
-                            alt="Portfolio preview"
-                            className="w-full h-48 mx-auto object-cover rounded-lg"
-                          />
-                          <p className="text-sm text-muted-foreground">
-                            Click or drag to change image
-                          </p>
-                        </div>
-                      ) : (
+                    
+                    {/* Show existing images */}
+                    {portfolioImagePreviews.length > 0 && (
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        {portfolioImagePreviews.map((preview, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={preview}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg"
+                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removePortfolioImage(index);
+                              }}
+                              className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Upload area - only show if under limit */}
+                    {portfolioImagePreviews.length < MAX_PORTFOLIO_IMAGES && (
+                      <div
+                        className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer"
+                        onDrop={handlePortfolioImageDrop}
+                        onDragOver={(e) => e.preventDefault()}
+                        onClick={() => portfolioFileInputRef.current?.click()}
+                      >
                         <div className="space-y-2">
                           <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground" />
                           <p className="text-sm text-muted-foreground">
                             Click to upload or drag and drop
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            PNG, JPG up to 5MB
+                            PNG, JPG up to 500KB each (max {MAX_PORTFOLIO_IMAGES} images)
                           </p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <input
                       ref={portfolioFileInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handlePortfolioImageChange}
                       className="hidden"
                     />
@@ -1044,34 +1190,55 @@ export default function ProfilePage() {
                             className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                           />
                           
-                          {/* Edit Portfolio Image */}
+                          {/* Edit Portfolio Images */}
                           <div>
-                            <div
-                              className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer"
-                              onDrop={handleEditPortfolioImageDrop}
-                              onDragOver={(e) => e.preventDefault()}
-                              onClick={() => editPortfolioFileInputRef.current?.click()}
-                            >
-                              {editPortfolioImagePreview ? (
-                                <div className="space-y-2">
-                                  <img
-                                    src={editPortfolioImagePreview}
-                                    alt="Portfolio preview"
-                                    className="w-full h-32 mx-auto object-cover rounded-lg"
-                                  />
-                                  <p className="text-xs text-muted-foreground">Click to change</p>
-                                </div>
-                              ) : (
+                            <label className="block text-sm font-medium mb-2">
+                              Project Images ({editPortfolioImagePreviews.length}/{MAX_PORTFOLIO_IMAGES})
+                            </label>
+                            
+                            {/* Show existing images */}
+                            {editPortfolioImagePreviews.length > 0 && (
+                              <div className="grid grid-cols-2 gap-2 mb-2">
+                                {editPortfolioImagePreviews.map((preview, index) => (
+                                  <div key={index} className="relative group">
+                                    <img
+                                      src={preview}
+                                      alt={`Preview ${index + 1}`}
+                                      className="w-full h-24 object-cover rounded-lg"
+                                    />
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeEditPortfolioImage(index);
+                                      }}
+                                      className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {/* Upload area */}
+                            {editPortfolioImagePreviews.length < MAX_PORTFOLIO_IMAGES && (
+                              <div
+                                className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer"
+                                onDrop={handleEditPortfolioImageDrop}
+                                onDragOver={(e) => e.preventDefault()}
+                                onClick={() => editPortfolioFileInputRef.current?.click()}
+                              >
                                 <div className="space-y-2">
                                   <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground" />
-                                  <p className="text-xs text-muted-foreground">Click to upload image</p>
+                                  <p className="text-xs text-muted-foreground">Click to upload (max {MAX_PORTFOLIO_IMAGES})</p>
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
                             <input
                               ref={editPortfolioFileInputRef}
                               type="file"
                               accept="image/*"
+                              multiple
                               onChange={handleEditPortfolioImageChange}
                               className="hidden"
                             />
@@ -1096,57 +1263,71 @@ export default function ProfilePage() {
                     ) : (
                       /* Display Mode */
                       <>
-                        {item.mediaFile && (
-                          <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
-                            <img
-                              src={item.mediaFile}
-                              alt={item.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                        )}
-                        <div className="p-6">
-                          <h3 className="text-xl font-bold mb-2">{item.name}</h3>
-                          {item.companyName && (
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {item.companyName} {item.role && `• ${item.role}`}
-                            </p>
+                        <div 
+                          onClick={() => {
+                            setSelectedProject(item);
+                            setIsDrawerOpen(true);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          {item.mediaFiles && item.mediaFiles.length > 0 && (
+                            <div className="aspect-[4/3] bg-gray-100 overflow-hidden relative">
+                              <img
+                                src={item.mediaFiles[0]}
+                                alt={item.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                              {item.mediaFiles.length > 1 && (
+                                <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
+                                  {item.mediaFiles.length} photos
+                                </div>
+                              )}
+                            </div>
                           )}
-                          {item.description && (
-                            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                              {item.description}
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between">
-                            {item.workUrls && (
-                              <a
-                                href={item.workUrls}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-primary hover:underline flex items-center gap-1"
-                              >
-                                View Project
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
+                          <div className="p-6">
+                            <h3 className="text-xl font-bold mb-2">{item.name}</h3>
+                            {item.companyName && (
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {item.companyName} {item.role && `• ${item.role}`}
+                              </p>
                             )}
-                            {isOwnProfile && (
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => handleEditPortfolio(item)}
-                                  className="p-2 opacity-0 group-hover:opacity-100 hover:bg-blue-50 rounded-lg transition-all"
-                                  title="Edit project"
-                                >
-                                  <Edit2 className="w-4 h-4 text-blue-600" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeletePortfolio(item.id)}
-                                  className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg transition-all"
-                                  title="Delete project"
-                                >
-                                  <X className="w-4 h-4 text-red-600" />
-                                </button>
-                              </div>
+                            {item.description && (
+                              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                                {item.description}
+                              </p>
                             )}
+                            <div className="flex items-center justify-between">
+                              {item.workUrls && (
+                                <a
+                                  href={item.workUrls.startsWith('http') ? item.workUrls : `https://${item.workUrls}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                                >
+                                  View Project
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                              {isOwnProfile && (
+                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    onClick={() => handleEditPortfolio(item)}
+                                    className="p-2 opacity-0 group-hover:opacity-100 hover:bg-blue-50 rounded-lg transition-all"
+                                    title="Edit project"
+                                  >
+                                    <Edit2 className="w-4 h-4 text-blue-600" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePortfolio(item.id)}
+                                    className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg transition-all"
+                                    title="Delete project"
+                                  >
+                                    <X className="w-4 h-4 text-red-600" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </>
@@ -1218,13 +1399,18 @@ export default function ProfilePage() {
                     />
                     <span className="text-sm">I currently work here</span>
                   </label>
-                  <textarea
-                    value={experienceForm.description}
-                    onChange={(e) => setExperienceForm({ ...experienceForm, description: e.target.value })}
-                    placeholder="Description (optional)"
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  />
+                  <div>
+                    <textarea
+                      value={experienceForm.description}
+                      onChange={(e) => setExperienceForm({ ...experienceForm, description: e.target.value })}
+                      placeholder="Description - You can use multiple paragraphs, bullet points (•), and include URLs"
+                      rows={6}
+                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tip: Press Enter for new lines. URLs will be automatically linked.
+                    </p>
+                  </div>
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={handleAddExperience}
@@ -1278,7 +1464,9 @@ export default function ProfilePage() {
                         </span>
                       </div>
                       {exp.description && (
-                        <p className="text-muted-foreground">{exp.description}</p>
+                        <div className="text-muted-foreground whitespace-pre-wrap">
+                          {formatRichText(exp.description)}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1290,6 +1478,16 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Project Detail Drawer */}
+      <ProjectDrawer 
+        project={selectedProject}
+        isOpen={isDrawerOpen}
+        onClose={() => {
+          setIsDrawerOpen(false);
+          setSelectedProject(null);
+        }}
+      />
     </div>
   );
 }

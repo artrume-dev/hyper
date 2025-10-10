@@ -20,7 +20,7 @@ export interface PortfolioItem {
   companyName?: string;
   role?: string;
   workUrls?: string;
-  mediaFile?: string;
+  mediaFiles?: string[]; // Array of image URLs
   userId: string;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +52,7 @@ export interface UpdateProfileRequest {
   location?: string;
   hourlyRate?: number;
   available?: boolean;
+  nextAvailability?: string;
   avatar?: string;
 }
 
@@ -65,7 +66,7 @@ export interface CreatePortfolioRequest {
   companyName?: string;
   role?: string;
   workUrls?: string;
-  mediaFile?: string;
+  mediaFiles?: string[]; // Array of base64 or URLs
 }
 
 export interface UpdatePortfolioRequest {
@@ -74,7 +75,7 @@ export interface UpdatePortfolioRequest {
   companyName?: string;
   role?: string;
   workUrls?: string;
-  mediaFile?: string;
+  mediaFiles?: string[]; // Array of base64 or URLs
 }
 
 export interface CreateExperienceRequest {

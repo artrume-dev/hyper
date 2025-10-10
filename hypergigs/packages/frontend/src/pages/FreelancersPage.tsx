@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Search } from 'lucide-react';
+import { MapPin, Search, Calendar } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { useState, useEffect } from 'react';
 import { userService } from '@/services/api/user.service';
@@ -146,9 +146,17 @@ export default function FreelancersPage() {
                       <CardHeader className="text-center pb-4">
                         {/* Avatar */}
                         <div className="mb-4 flex justify-center">
-                          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-foreground text-xl font-bold border border-border">
-                            {getInitials(freelancer.firstName, freelancer.lastName)}
-                          </div>
+                          {freelancer.avatar ? (
+                            <img
+                              src={freelancer.avatar}
+                              alt={`${freelancer.firstName} ${freelancer.lastName || ''}`}
+                              className="w-20 h-20 rounded-full object-cover border border-border"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-foreground text-xl font-bold border border-border">
+                              {getInitials(freelancer.firstName, freelancer.lastName)}
+                            </div>
+                          )}
                         </div>
                         
                         {/* Name & Username */}
@@ -158,12 +166,23 @@ export default function FreelancersPage() {
                         <p className="text-sm text-muted-foreground">@{freelancer.username}</p>
                         
                         {/* Availability Badge */}
-                        {freelancer.available && (
-                          <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-muted text-foreground text-xs font-medium mt-2 border border-border">
-                            <div className="w-2 h-2 rounded-full bg-foreground" />
-                            Available
+                        {freelancer.available ? (
+                          <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground mt-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <span>Available</span>
                           </div>
-                        )}
+                        ) : freelancer.nextAvailability ? (
+                          <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground mt-2">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>
+                              Available {new Date(freelancer.nextAvailability).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        ) : null}
                       </CardHeader>
 
                       <CardContent className="space-y-4">

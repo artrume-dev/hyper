@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 // PostgreSQL is used for both development and production
@@ -223,7 +223,7 @@ model Portfolio {
   companyName String?
   role        String?
   workUrls    String?
-  mediaFile   String?
+  mediaFiles  String?  @default("[]") // JSON array stored as string for SQLite compatibility
   
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)

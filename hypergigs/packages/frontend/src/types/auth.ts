@@ -11,6 +11,7 @@ export interface User {
   location?: string;
   avatar?: string;
   available: boolean;
+  nextAvailability?: string;
   hourlyRate?: number;
   createdAt: string;
   updatedAt: string;

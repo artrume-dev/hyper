@@ -129,7 +129,17 @@ export const searchUsers = async (req: Request, res: Response): Promise<void> =>
       offset: offset ? parseInt(offset as string) : undefined,
     });
 
-    res.status(200).json({ users, count: users.length });
+    const resultLimit = limit ? parseInt(limit as string) : 20;
+    const resultOffset = offset ? parseInt(offset as string) : 0;
+    const page = Math.floor(resultOffset / resultLimit) + 1;
+    const totalPages = Math.ceil(users.length / resultLimit);
+
+    res.status(200).json({ 
+      users, 
+      total: users.length,
+      page,
+      totalPages 
+    });
   } catch (error) {
     logger.error('Search users error:', error);
     res.status(500).json({ error: 'Failed to search users' });
@@ -198,7 +208,7 @@ export const addPortfolio = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const { name, description, companyName, role, workUrls, mediaFile } = req.body;
+    const { name, description, companyName, role, workUrls, mediaFiles } = req.body;
 
     if (!name) {
       res.status(400).json({ error: 'Portfolio name is required' });
@@ -211,7 +221,7 @@ export const addPortfolio = async (req: Request, res: Response): Promise<void> =
       companyName,
       role,
       workUrls,
-      mediaFile,
+      mediaFiles, // Array of image URLs/base64 strings
     });
 
     res.status(201).json({ portfolio });
@@ -232,7 +242,7 @@ export const updatePortfolio = async (req: Request, res: Response): Promise<void
     }
 
     const { portfolioId } = req.params;
-    const { name, description, companyName, role, workUrls, mediaFile } = req.body;
+    const { name, description, companyName, role, workUrls, mediaFiles } = req.body;
 
     const portfolio = await userService.updatePortfolio(req.userId, portfolioId, {
       name,
@@ -240,7 +250,7 @@ export const updatePortfolio = async (req: Request, res: Response): Promise<void
       companyName,
       role,
       workUrls,
-      mediaFile,
+      mediaFiles, // Array of image URLs/base64 strings
     });
 
     res.status(200).json({ portfolio });

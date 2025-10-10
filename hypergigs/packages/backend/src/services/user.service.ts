@@ -73,7 +73,16 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    return user;
+    // Parse mediaFiles JSON strings to arrays
+    const portfoliosWithParsedMedia = user.portfolios.map(portfolio => ({
+      ...portfolio,
+      mediaFiles: portfolio.mediaFiles ? JSON.parse(portfolio.mediaFiles) : [],
+    }));
+
+    return {
+      ...user,
+      portfolios: portfoliosWithParsedMedia,
+    };
   }
 
   /**
@@ -127,7 +136,16 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    return user;
+    // Parse mediaFiles JSON strings to arrays
+    const portfoliosWithParsedMedia = user.portfolios.map(portfolio => ({
+      ...portfolio,
+      mediaFiles: portfolio.mediaFiles ? JSON.parse(portfolio.mediaFiles) : [],
+    }));
+
+    return {
+      ...user,
+      portfolios: portfoliosWithParsedMedia,
+    };
   }
 
   /**
@@ -234,6 +252,8 @@ export class UserService {
         location: true,
         avatar: true,
         available: true,
+        nextAvailability: true,
+        hourlyRate: true,
         _count: {
           select: {
             followers: true,
@@ -332,17 +352,24 @@ export class UserService {
     companyName?: string;
     role?: string;
     workUrls?: string;
-    mediaFile?: string;
+    mediaFiles?: string[];
   }) {
     const portfolio = await prisma.portfolio.create({
       data: {
         ...data,
+        mediaFiles: data.mediaFiles ? JSON.stringify(data.mediaFiles) : '[]',
         userId,
       },
     });
 
+    // Parse mediaFiles back to array for response
+    const result = {
+      ...portfolio,
+      mediaFiles: portfolio.mediaFiles ? JSON.parse(portfolio.mediaFiles) : [],
+    };
+
     logger.info(`Portfolio item added for user ${userId}`);
-    return portfolio;
+    return result;
   }
 
   /**
@@ -354,7 +381,7 @@ export class UserService {
     companyName?: string;
     role?: string;
     workUrls?: string;
-    mediaFile?: string;
+    mediaFiles?: string[];
   }) {
     // Check if portfolio belongs to user
     const portfolio = await prisma.portfolio.findFirst({
@@ -370,11 +397,20 @@ export class UserService {
 
     const updatedPortfolio = await prisma.portfolio.update({
       where: { id: portfolioId },
-      data,
+      data: {
+        ...data,
+        mediaFiles: data.mediaFiles ? JSON.stringify(data.mediaFiles) : undefined,
+      },
     });
 
+    // Parse mediaFiles back to array for response
+    const result = {
+      ...updatedPortfolio,
+      mediaFiles: updatedPortfolio.mediaFiles ? JSON.parse(updatedPortfolio.mediaFiles) : [],
+    };
+
     logger.info(`Portfolio item updated: ${portfolioId}`);
-    return updatedPortfolio;
+    return result;
   }
 
   /**
