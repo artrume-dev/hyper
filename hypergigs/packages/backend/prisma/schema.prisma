@@ -6,13 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// PostgreSQL is used for both development and production
-// Local dev: postgresql://localhost:5432/hypergigs_dev
-// Production (Railway): Automatically set by Railway
+// PostgreSQL for both development and production
+// Local dev: Set DATABASE_URL to postgresql://localhost:5432/hypergigs_dev
+// Production (Railway): DATABASE_URL automatically provided by Railway
 
 model User {
   id                String    @id @default(uuid())
