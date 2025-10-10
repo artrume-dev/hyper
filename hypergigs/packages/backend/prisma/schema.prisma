@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,43 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// PostgreSQL for both development and production
-// Local dev: Set DATABASE_URL to postgresql://localhost:5432/hypergigs_dev
-// Production (Railway): DATABASE_URL automatically provided by Railway
-
 model User {
-  id                String    @id @default(uuid())
-  email             String    @unique
-  username          String    @unique
-  password          String
-  firstName         String?
-  lastName          String?
-  role              String    @default("FREELANCER") // FREELANCER | AGENCY | STARTUP
-  bio               String?
-  location          String?
-  avatar            String?
-  available         Boolean   @default(true)
-  nextAvailability  DateTime?
-  hourlyRate        Float?
-  
-  // Relationships
-  ownedTeams        Team[]            @relation("TeamOwner")
-  teamMembers       TeamMember[]
-  sentInvitations   Invitation[]      @relation("InvitationSender")
-  receivedInvitations Invitation[]    @relation("InvitationReceiver")
-  followers         Follow[]          @relation("UserFollowers")
-  following         Follow[]          @relation("UserFollowing")
-  sentMessages      Message[]         @relation("MessageSender")
-  receivedMessages  Message[]         @relation("MessageReceiver")
-  sentNotifications Notification[]    @relation("NotificationSender")
-  receivedNotifications Notification[] @relation("NotificationReceiver")
-  skills            UserSkill[]
-  portfolios        Portfolio[]
-  workExperiences   WorkExperience[]
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
+  id                    String           @id @default(uuid())
+  email                 String           @unique
+  username              String           @unique
+  password              String
+  firstName             String?
+  lastName              String?
+  role                  String           @default("FREELANCER")
+  bio                   String?
+  location              String?
+  avatar                String?
+  available             Boolean          @default(true)
+  nextAvailability      DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  hourlyRate            Float?
+  following             Follow[]         @relation("UserFollowing")
+  followers             Follow[]         @relation("UserFollowers")
+  receivedInvitations   Invitation[]     @relation("InvitationReceiver")
+  sentInvitations       Invitation[]     @relation("InvitationSender")
+  receivedMessages      Message[]        @relation("MessageReceiver")
+  sentMessages          Message[]        @relation("MessageSender")
+  receivedNotifications Notification[]   @relation("NotificationReceiver")
+  sentNotifications     Notification[]   @relation("NotificationSender")
+  portfolios            Portfolio[]
+  ownedTeams            Team[]           @relation("TeamOwner")
+  teamMembers           TeamMember[]
+  skills                UserSkill[]
+  workExperiences       WorkExperience[]
+
   @@index([email])
   @@index([username])
   @@index([role])
@@ -59,66 +49,51 @@ model Team {
   slug        String       @unique
   description String?
   avatar      String?
-  type        String       @default("PROJECT") // PROJECT | AGENCY | STARTUP
+  type        String       @default("PROJECT")
   city        String?
-  
-  // Owner relationship
   ownerId     String
-  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
-  
-  // Relationships
-  members     TeamMember[]
-  invitations Invitation[]
-  projects    Project[]
-  messages    Message[]
-  
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  
+  invitations Invitation[]
+  messages    Message[]
+  projects    Project[]
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  members     TeamMember[]
+
   @@index([slug])
   @@index([ownerId])
   @@index([type])
 }
 
 model TeamMember {
-  id        String          @id @default(uuid())
-  role      String          @default("MEMBER") // OWNER | ADMIN | MEMBER
-  
-  // Relationships
-  userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  teamId    String
-  team      Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
-  joinedAt  DateTime        @default(now())
-  
+  id       String   @id @default(uuid())
+  role     String   @default("MEMBER")
+  userId   String
+  teamId   String
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, teamId])
   @@index([userId])
   @@index([teamId])
 }
 
 model Invitation {
-  id          String           @id @default(uuid())
-  status      String           @default("PENDING") // PENDING | ACCEPTED | DECLINED | CANCELLED | EXPIRED
-  role        String           @default("MEMBER") // OWNER | ADMIN | MEMBER - role user will have when accepting
-  message     String?
-  expiresAt   DateTime
-  
-  // Sender (initiator)
-  senderId    String
-  sender      User             @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
-  
-  // Receiver
-  receiverId  String
-  receiver    User             @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  
-  // Team context
-  teamId      String
-  team        Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  
+  id         String   @id @default(uuid())
+  status     String   @default("PENDING")
+  role       String   @default("MEMBER")
+  message    String?
+  expiresAt  DateTime
+  senderId   String
+  receiverId String
+  teamId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  receiver   User     @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   @@index([senderId])
   @@index([receiverId])
   @@index([teamId])
@@ -127,17 +102,12 @@ model Invitation {
 
 model Follow {
   id          String   @id @default(uuid())
-  
-  // Follower (who follows)
   followerId  String
-  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  
-  // Following (who is being followed)
   followingId String
-  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
-  
   createdAt   DateTime @default(now())
-  
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
@@ -147,22 +117,15 @@ model Message {
   id         String   @id @default(uuid())
   content    String
   read       Boolean  @default(false)
-  
-  // Sender
   senderId   String
-  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  
-  // Receiver (for direct messages)
   receiverId String?
-  receiver   User?    @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  
-  // Team (for team messages)
   teamId     String?
-  team       Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  
+  receiver   User?    @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  team       Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   @@index([senderId])
   @@index([receiverId])
   @@index([teamId])
@@ -170,23 +133,18 @@ model Message {
 }
 
 model Notification {
-  id         String           @id @default(uuid())
-  type       String // FOLLOW | TEAM_INVITATION | USER_INVITATION | INVITATION_ACCEPTED | INVITATION_DECLINED | MESSAGE | TEAM_MESSAGE
+  id         String   @id @default(uuid())
+  type       String
   message    String
-  read       Boolean          @default(false)
+  read       Boolean  @default(false)
   entityId   String?
   entityType String?
-  
-  // Sender
   senderId   String?
-  sender     User?            @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
-  
-  // Receiver
   receiverId String
-  receiver   User             @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  
-  createdAt  DateTime         @default(now())
-  
+  createdAt  DateTime @default(now())
+  receiver   User     @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User?    @relation("NotificationSender", fields: [senderId], references: [id])
+
   @@index([receiverId])
   @@index([read])
   @@index([createdAt])
@@ -196,21 +154,17 @@ model Skill {
   id        String      @id @default(uuid())
   name      String      @unique
   category  String?
-  
-  users     UserSkill[]
-  
   createdAt DateTime    @default(now())
+  users     UserSkill[]
 }
 
 model UserSkill {
-  id        String   @id @default(uuid())
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  skillId   String
-  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  
+  id      String @id @default(uuid())
+  userId  String
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, skillId])
   @@index([userId])
   @@index([skillId])
@@ -224,13 +178,11 @@ model Portfolio {
   role        String?
   workUrls    String?
   mediaFiles  String?  @default("[]") // JSON array stored as string for SQLite compatibility
-  
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
@@ -242,32 +194,28 @@ model WorkExperience {
   startDate   DateTime
   endDate     DateTime?
   present     Boolean   @default(false)
-  
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
 model Project {
-  id               String    @id @default(uuid())
-  title            String
-  description      String
-  workLocation     String?
-  startDate        DateTime?
-  duration         Int?
-  minCost          Int?
-  maxCost          Int?
-  currency         String?
-  
-  teamId           String
-  team             Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  
+  id           String    @id @default(uuid())
+  title        String
+  description  String
+  workLocation String?
+  startDate    DateTime?
+  duration     Int?
+  minCost      Int?
+  maxCost      Int?
+  currency     String?
+  teamId       String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  team         Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   @@index([teamId])
 }
