@@ -7,7 +7,14 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import invitationRoutes from './routes/invitation.routes.js';
+import emailInvitationRoutes from './routes/emailInvitation.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
+import recommendationRoutes from './routes/recommendation.routes.js';
+import collaborationRoutes from './routes/collaboration.routes.js';
+import portfolioContributorRoutes from './routes/portfolioContributor.routes.js';
+import jobRoutes from './routes/job.routes.js';
+import applicationRoutes from './routes/application.routes.js';
 
 // Create Express app
 export const app = express();
@@ -15,7 +22,8 @@ export const app = express();
 // CORS configuration - allow Vite dev and preview ports + production
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:5174', 
+  'http://localhost:5174',
+  'http://localhost:5175',
   'http://localhost:4173',
   'http://localhost:4174',
   process.env.CORS_ORIGIN, // Railway production frontend
@@ -83,8 +91,29 @@ app.use('/api/teams', teamRoutes);
 // Invitation routes
 app.use('/api/invitations', invitationRoutes);
 
+// Email Invitation routes
+app.use('/api/email-invitations', emailInvitationRoutes);
+
 // AI routes
 app.use('/api/ai', aiRoutes);
+
+// Dashboard routes
+app.use('/api/dashboard', dashboardRoutes);
+
+// Recommendation routes
+app.use('/api/recommendations', recommendationRoutes);
+
+// Collaboration routes
+app.use('/api/collaboration', collaborationRoutes);
+
+// Portfolio Contributor routes
+app.use('/api/portfolios', portfolioContributorRoutes);
+
+// Job Posting routes
+app.use('/api/jobs', jobRoutes);
+
+// Application routes
+app.use('/api', applicationRoutes);
 
 // Error handling
 app.use(notFoundHandler);

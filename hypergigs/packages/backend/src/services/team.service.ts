@@ -1,15 +1,34 @@
 import { prisma } from '../lib/prisma.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/logger';
+import {
+  extractTeamKeywords,
+  calculateMatchScore,
+  generateMatchReason,
+} from '../utils/keywordExtractor.js';
 
-export type TeamType = 'PROJECT' | 'AGENCY' | 'STARTUP';
+export type TeamType = 'COMPANY' | 'ORGANIZATION' | 'TEAM' | 'DEPARTMENT';
+export type SubTeamCategory =
+  | 'ENGINEERING'
+  | 'MARKETING'
+  | 'DESIGN'
+  | 'HR'
+  | 'SALES'
+  | 'PRODUCT'
+  | 'OPERATIONS'
+  | 'FINANCE'
+  | 'LEGAL'
+  | 'SUPPORT'
+  | 'OTHER';
 export type MemberRole = 'OWNER' | 'ADMIN' | 'MEMBER';
 
 export interface CreateTeamData {
   name: string;
   description?: string;
   type: TeamType;
+  subTeamCategory?: SubTeamCategory; // Only for sub-teams
   city?: string;
   avatar?: string;
+  parentTeamId?: string;
 }
 
 export interface UpdateTeamData {
@@ -54,6 +73,33 @@ export class TeamService {
    * Create team with specific slug
    */
   private async createTeamWithSlug(ownerId: string, data: CreateTeamData, slug: string) {
+    // If this is a sub-team, verify parent exists and user is admin
+    if (data.parentTeamId) {
+      const parentTeam = await prisma.team.findUnique({
+        where: { id: data.parentTeamId },
+        include: {
+          members: {
+            where: {
+              userId: ownerId,
+              role: { in: ['OWNER', 'ADMIN'] },
+            },
+          },
+        },
+      });
+
+      if (!parentTeam) {
+        throw new Error('Parent team not found');
+      }
+
+      if (parentTeam.members.length === 0) {
+        throw new Error('Only admins can create sub-teams');
+      }
+
+      if (!parentTeam.isMainTeam) {
+        throw new Error('Sub-teams can only be created under main teams');
+      }
+    }
+
     // Create team and add owner as team member in a transaction
     const result = await prisma.$transaction(async (tx: any) => {
       const team = await tx.team.create({
@@ -62,9 +108,12 @@ export class TeamService {
           slug,
           description: data.description,
           type: data.type,
+          subTeamCategory: data.subTeamCategory, // Department category for sub-teams
           city: data.city,
           avatar: data.avatar,
           ownerId,
+          parentTeamId: data.parentTeamId,
+          isMainTeam: !data.parentTeamId, // If has parent, it's a sub-team
         },
         include: {
           owner: {
@@ -91,7 +140,8 @@ export class TeamService {
       return team;
     });
 
-    logger.info(`Team created: ${result.name} by user ${ownerId}`);
+    const teamType = data.parentTeamId ? 'Sub-team' : 'Main team';
+    logger.info(`${teamType} created: ${result.name} by user ${ownerId}`);
     return result;
   }
 
@@ -277,7 +327,10 @@ export class TeamService {
     const limit = filters.limit || 20;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = {
+      // Only show main teams (not sub-teams)
+      isMainTeam: true,
+    };
 
     if (filters.type) {
       where.type = filters.type;
@@ -315,6 +368,11 @@ export class TeamService {
             select: {
               members: true,
               projects: true,
+              jobPostings: {
+                where: {
+                  status: 'ACTIVE',
+                },
+              },
             },
           },
         },
@@ -341,7 +399,13 @@ export class TeamService {
    */
   async getUserTeams(userId: string) {
     const teamMembers = await prisma.teamMember.findMany({
-      where: { userId },
+      where: {
+        userId,
+        team: {
+          // Only show main teams (not sub-teams)
+          isMainTeam: true,
+        },
+      },
       include: {
         team: {
           include: {
@@ -370,7 +434,7 @@ export class TeamService {
 
     return teamMembers.map((tm: any) => ({
       ...tm.team,
-      myRole: tm.role,
+      role: tm.role,  // Frontend expects 'role' not 'myRole'
       joinedAt: tm.joinedAt,
     }));
   }
@@ -647,6 +711,173 @@ export class TeamService {
     });
 
     return member ? (member.role as MemberRole) : null;
+  }
+
+  /**
+   * Get sub-teams of a team
+   */
+  async getSubTeams(parentTeamId: string) {
+    const subTeams = await prisma.team.findMany({
+      where: {
+        parentTeamId,
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+          },
+        },
+        _count: {
+          select: {
+            members: true,
+            projects: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return subTeams;
+  }
+
+  /**
+   * Get suggested members for a team based on intelligent keyword matching
+   */
+  async getSuggestedMembers(teamId: string, userId: string, limit = 10) {
+    // Verify user is a team member
+    const isMember = await this.isTeamMember(teamId, userId);
+    if (!isMember) {
+      throw new Error('Only team members can view member suggestions');
+    }
+
+    // Get team details
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        members: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!team) {
+      throw new Error('Team not found');
+    }
+
+    // Extract keywords from team information
+    const teamKeywords = extractTeamKeywords({
+      name: team.name,
+      description: team.description || undefined,
+      type: team.type,
+      subTeamCategory: team.subTeamCategory || undefined,
+    });
+
+    logger.info(
+      `Team "${team.name}" - Type: ${team.type}, SubCategory: ${team.subTeamCategory || 'none'}`
+    );
+    logger.info(`Extracted keywords: [${teamKeywords.join(', ')}]`);
+
+    // Get all users who are not already team members
+    const existingMemberIds = team.members.map((m) => m.userId);
+
+    // Query users with their skills and work experiences for accurate matching
+    const users = await prisma.user.findMany({
+      where: {
+        id: { notIn: existingMemberIds },
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        bio: true,
+        jobTitle: true,
+        location: true,
+        country: true,
+        available: true,
+        skills: {
+          include: {
+            skill: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        workExperiences: {
+          select: {
+            title: true,
+            description: true,
+          },
+        },
+      },
+      take: 100, // Get more users for better matching
+    });
+
+    // Calculate match scores for each user
+    const teamLocation = {
+      city: team.city || undefined,
+    };
+
+    const scoredUsers = users
+      .map((user) => {
+        // Convert nullable fields to undefined for the matching functions
+        const userForMatching = {
+          bio: user.bio || undefined,
+          jobTitle: user.jobTitle || undefined,
+          location: user.location || undefined,
+          country: user.country || undefined,
+          skills: user.skills,
+          workExperiences: user.workExperiences.map(exp => ({
+            role: exp.title, // Map 'title' to 'role' for the matching function
+            description: exp.description || undefined,
+          })),
+        };
+
+        const score = calculateMatchScore(teamKeywords, userForMatching, teamLocation);
+        const matchReason = generateMatchReason(teamKeywords, userForMatching);
+
+        return {
+          user: {
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatar: user.avatar,
+            bio: user.bio,
+            jobTitle: user.jobTitle,
+            location: user.location,
+            available: user.available,
+          },
+          score,
+          matchReason,
+        };
+      })
+      .filter((item) => item.score >= 10) // Only show users with meaningful matches (min 10 points)
+      .sort((a, b) => b.score - a.score) // Sort by score descending
+      .slice(0, limit); // Limit results
+
+    // Log detailed matching results
+    scoredUsers.forEach(item => {
+      logger.info(
+        `  → ${item.user.username} (${item.user.jobTitle || 'no title'}) - Score: ${item.score} - Reason: ${item.matchReason}`
+      );
+    });
+
+    logger.info(
+      `Found ${scoredUsers.length} suggested members for team ${team.name} (${teamId}) with keyword matching`
+    );
+
+    return scoredUsers;
   }
 
   /**

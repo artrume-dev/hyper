@@ -10,8 +10,8 @@ export const invitationService = {
    * Send an invitation
    */
   async sendInvitation(data: SendInvitationRequest): Promise<Invitation> {
-    const response = await api.post<Invitation>('/api/invitations', data);
-    return response.data;
+    const response = await api.post<{ invitation: Invitation }>('/api/invitations', data);
+    return response.data.invitation;
   },
 
   /**

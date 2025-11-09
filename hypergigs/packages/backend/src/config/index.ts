@@ -18,10 +18,10 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   },
   cors: {
-    // Allow multiple origins in development (Vite may use 5173 or 5174)
-    origin: process.env.CORS_ORIGIN 
+    // Allow multiple origins in development (Vite may use 5173, 5174, or 5175)
+    origin: process.env.CORS_ORIGIN
       ? process.env.CORS_ORIGIN.split(',')
-      : ['http://localhost:5173', 'http://localhost:5174'],
+      : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
   },
   socket: {
     port: parseInt(process.env.SOCKET_PORT || '3002', 10),

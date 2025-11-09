@@ -8,13 +8,13 @@ import Navigation from '@/components/Navigation';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       <Navigation />
       
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 overflow-hidden">
+      <section className="relative pt-32 pb-20 px-4 overflow-hidden ">
         {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background" />
+        <div className="absolute inset-0" />
         
         <div className="max-w-7xl mx-auto relative">
           <motion.div
@@ -33,10 +33,10 @@ export default function LandingPage() {
               <span className="text-sm font-medium">The Future of Team Collaboration</span>
             </motion.div>
 
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-              Build exceptional teams,
+            <h1 className="text-5xl md:text-7xl font-medium mb-6 leading-tight">
+              Build exceptional teams, 
               <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+              <span className="text-primary font-thin">
                 create amazing work
               </span>
             </h1>
@@ -205,54 +205,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="font-semibold mb-4">Product</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/teams" className="hover:text-foreground transition-colors">Teams</Link></li>
-                <li><Link to="/freelancers" className="hover:text-foreground transition-colors">Freelancers</Link></li>
-                <li><Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/about" className="hover:text-foreground transition-colors">About</Link></li>
-                <li><Link to="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
-                <li><Link to="/careers" className="hover:text-foreground transition-colors">Careers</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Resources</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/help" className="hover:text-foreground transition-colors">Help Center</Link></li>
-                <li><Link to="/community" className="hover:text-foreground transition-colors">Community</Link></li>
-                <li><Link to="/guidelines" className="hover:text-foreground transition-colors">Guidelines</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link></li>
-                <li><Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link></li>
-                <li><Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-gradient-to-br from-primary to-primary/60 rounded" />
-              <span className="font-semibold">Hypergigs</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              © 2025 Hypergigs. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+
     </div>
   );
 }

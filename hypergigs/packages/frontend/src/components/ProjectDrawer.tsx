@@ -1,15 +1,24 @@
-import { useEffect } from 'react';
-import { X, ExternalLink, Calendar, Building, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, ExternalLink, Calendar, Building, User, MessageSquare, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PortfolioItem } from '@/types/user';
+import { useAuthStore } from '@/stores/authStore';
+import EnhancedRecommendationDialog from './EnhancedRecommendationDialog';
+import ContributorBadge from './ContributorBadge';
+import ContributorManager from './ContributorManager';
+import { Button } from './ui/button';
 
 interface ProjectDrawerProps {
   project: PortfolioItem | null;
   isOpen: boolean;
   onClose: () => void;
+  isOwnProfile?: boolean;
 }
 
-export default function ProjectDrawer({ project, isOpen, onClose }: ProjectDrawerProps) {
+export default function ProjectDrawer({ project, isOpen, onClose, isOwnProfile = false }: ProjectDrawerProps) {
+  const { user } = useAuthStore();
+  const [showRecommendationDialog, setShowRecommendationDialog] = useState(false);
+  const [showContributorManager, setShowContributorManager] = useState(false);
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -51,7 +60,7 @@ export default function ProjectDrawer({ project, isOpen, onClose }: ProjectDrawe
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-full w-full md:w-[60%] bg-background border-l border-border shadow-2xl z-50 overflow-hidden"
+            className="fixed right-0 top-0 h-full w-full max-w-7xl bg-background border-l border-border shadow-2xl z-50 overflow-hidden"
           >
             {/* Header with Close Button */}
             <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-4 flex items-center justify-between">
@@ -110,15 +119,55 @@ export default function ProjectDrawer({ project, isOpen, onClose }: ProjectDrawe
                 {project.description && (
                   <div className="space-y-2">
                     <h3 className="text-lg font-semibold">About This Project</h3>
-                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                      {project.description}
-                    </p>
+                    <div
+                      className="text-muted-foreground leading-relaxed prose"
+                      dangerouslySetInnerHTML={{ __html: project.description }}
+                    />
                   </div>
                 )}
 
-                {/* External Link Button */}
-                {project.workUrls && (
-                  <div className="pt-4">
+                {/* Created With - Tools/Methods */}
+                {project.createdWith && project.createdWith.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">Created With</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {project.createdWith.map((tool, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                        >
+                          {tool}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contributors Section */}
+                {project.contributors && project.contributors.length > 0 && (
+                  <div className="space-y-2">
+                    <ContributorBadge contributors={project.contributors} />
+                  </div>
+                )}
+
+                {/* Manage Contributors Button (owner only) */}
+                {isOwnProfile && user && user.id === project.userId && (
+                  <div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowContributorManager(true)}
+                      className="gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      Manage Contributors
+                    </Button>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="pt-4 flex flex-wrap gap-3">
+                  {/* External Link Button */}
+                  {project.workUrls && (
                     <a
                       href={project.workUrls.startsWith('http') ? project.workUrls : `https://${project.workUrls}`}
                       target="_blank"
@@ -128,8 +177,19 @@ export default function ProjectDrawer({ project, isOpen, onClose }: ProjectDrawe
                       <ExternalLink className="w-4 h-4" />
                       View Live Project
                     </a>
-                  </div>
-                )}
+                  )}
+
+                  {/* Request Recommendation Button - Only show if not own profile and user is logged in */}
+                  {!isOwnProfile && user && user.id !== project.userId && (
+                    <button
+                      onClick={() => setShowRecommendationDialog(true)}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors font-medium"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Request Recommendation
+                    </button>
+                  )}
+                </div>
 
                 {/* Additional Project Details Section */}
                 <div className="pt-6 border-t border-border">
@@ -152,6 +212,32 @@ export default function ProjectDrawer({ project, isOpen, onClose }: ProjectDrawe
               </div>
             </div>
           </motion.div>
+
+          {/* Recommendation Dialog */}
+          {project && (
+            <EnhancedRecommendationDialog
+              isOpen={showRecommendationDialog}
+              onClose={() => setShowRecommendationDialog(false)}
+              receiverId={project.userId}
+              receiverName={project.name}
+              defaultType="REQUEST"
+              portfolioId={project.id}
+              portfolioName={project.name}
+            />
+          )}
+
+          {/* Contributor Manager Dialog */}
+          {project && (
+            <ContributorManager
+              isOpen={showContributorManager}
+              onClose={() => setShowContributorManager(false)}
+              portfolioId={project.id}
+              portfolioName={project.name}
+              onContributorAdded={() => {
+                // Could refresh project data here if needed
+              }}
+            />
+          )}
         </>
       )}
     </AnimatePresence>

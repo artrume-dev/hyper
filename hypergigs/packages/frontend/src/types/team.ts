@@ -1,4 +1,16 @@
-export type TeamType = 'PROJECT' | 'AGENCY' | 'STARTUP';
+export type TeamType = 'COMPANY' | 'ORGANIZATION' | 'TEAM' | 'DEPARTMENT';
+export type SubTeamCategory =
+  | 'ENGINEERING'
+  | 'MARKETING'
+  | 'DESIGN'
+  | 'HR'
+  | 'SALES'
+  | 'PRODUCT'
+  | 'OPERATIONS'
+  | 'FINANCE'
+  | 'LEGAL'
+  | 'SUPPORT'
+  | 'OTHER';
 export type TeamRole = 'OWNER' | 'ADMIN' | 'MEMBER';
 
 export interface Team {
@@ -7,13 +19,24 @@ export interface Team {
   slug: string;
   description?: string;
   type: TeamType;
+  subTeamCategory?: SubTeamCategory;
   imageUrl?: string;
+  avatar?: string;
   website?: string;
   city?: string;
+  ownerId?: string;
+  parentTeamId?: string;
+  isMainTeam: boolean;
   memberCount: number;
   projectCount: number;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    members: number;
+    projects: number;
+    subTeams?: number;
+    jobPostings?: number;
+  };
 }
 
 export interface TeamMember {
@@ -39,9 +62,12 @@ export interface CreateTeamRequest {
   name: string;
   description?: string;
   type: TeamType;
+  subTeamCategory?: SubTeamCategory;
   imageUrl?: string;
+  avatar?: string;
   website?: string;
   city?: string;
+  parentTeamId?: string;
 }
 
 export interface UpdateTeamRequest {
@@ -49,6 +75,7 @@ export interface UpdateTeamRequest {
   description?: string;
   type?: TeamType;
   imageUrl?: string;
+  avatar?: string;
   website?: string;
   city?: string;
 }
@@ -56,6 +83,7 @@ export interface UpdateTeamRequest {
 export interface SearchTeamsFilters {
   type?: TeamType;
   city?: string;
+  search?: string;
   page?: number;
   limit?: number;
 }

@@ -30,7 +30,7 @@ export const sendInvitation = async (req: Request, res: Response): Promise<void>
       message,
     });
 
-    res.status(201).json(invitation);
+    res.status(201).json({ invitation });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Send invitation error:', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
@@ -57,7 +57,7 @@ export const getInvitation = async (req: Request, res: Response): Promise<void> 
 
     const invitation = await invitationService.getInvitationById(invitationId, userId);
 
-    res.status(200).json(invitation);
+    res.status(200).json({ invitation });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Get invitation error:', { error: errorMessage });
@@ -111,7 +111,7 @@ export const declineInvitation = async (req: Request, res: Response): Promise<vo
 
     const invitation = await invitationService.declineInvitation(invitationId, userId);
 
-    res.status(200).json(invitation);
+    res.status(200).json({ invitation });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Decline invitation error:', { error: errorMessage });
@@ -136,7 +136,7 @@ export const cancelInvitation = async (req: Request, res: Response): Promise<voi
 
     const invitation = await invitationService.cancelInvitation(invitationId, userId);
 
-    res.status(200).json(invitation);
+    res.status(200).json({ invitation });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Cancel invitation error:', { error: errorMessage });
@@ -164,7 +164,7 @@ export const getReceivedInvitations = async (req: Request, res: Response): Promi
       status as any
     );
 
-    res.status(200).json(invitations);
+    res.status(200).json({ invitations });
   } catch (error) {
     logger.error('Get received invitations error:', error);
     res.status(500).json({ error: 'Failed to get received invitations' });
@@ -184,7 +184,7 @@ export const getSentInvitations = async (req: Request, res: Response): Promise<v
       status as any
     );
 
-    res.status(200).json(invitations);
+    res.status(200).json({ invitations });
   } catch (error) {
     logger.error('Get sent invitations error:', error);
     res.status(500).json({ error: 'Failed to get sent invitations' });
@@ -206,7 +206,7 @@ export const getTeamInvitations = async (req: Request, res: Response): Promise<v
       status as any
     );
 
-    res.status(200).json(invitations);
+    res.status(200).json({ invitations });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Get team invitations error:', { error: errorMessage });

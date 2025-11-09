@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { invitationService } from '@/services/api/invitation.service';
+import { portfolioContributorService } from '@/services/api/portfolioContributor.service';
 import type { Invitation } from '@/types/invitation';
+import type { PortfolioContributor } from '@/types/user';
+import ContributorInvitationCard from '@/components/ContributorInvitationCard';
 
-type TabType = 'received' | 'sent';
+type TabType = 'received' | 'sent' | 'contributors';
 
 export default function InvitationsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('received');
   const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
   const [sentInvitations, setSentInvitations] = useState<Invitation[]>([]);
+  const [contributorInvitations, setContributorInvitations] = useState<PortfolioContributor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,14 +23,16 @@ export default function InvitationsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const [received, sent] = await Promise.all([
+
+      const [received, sent, contributors] = await Promise.all([
         invitationService.getReceivedInvitations(),
         invitationService.getSentInvitations(),
+        portfolioContributorService.getUserInvitations(),
       ]);
-      
+
       setReceivedInvitations(received);
       setSentInvitations(sent);
+      setContributorInvitations(contributors);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load invitations');
     } finally {
@@ -83,18 +89,21 @@ export default function InvitationsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center py-12">
         <div className="text-lg">Loading invitations...</div>
       </div>
     );
   }
 
-  const invitations = activeTab === 'received' ? receivedInvitations : sentInvitations;
+  const invitations = activeTab === 'received'
+    ? receivedInvitations
+    : activeTab === 'sent'
+    ? sentInvitations
+    : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Invitations</h1>
+    <div>
+      <h1 className="text-3xl font-bold mb-8">Invitations</h1>
 
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -114,7 +123,7 @@ export default function InvitationsPage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
               >
-                Received ({receivedInvitations.length})
+                Team Invites ({receivedInvitations.length})
               </button>
               <button
                 onClick={() => setActiveTab('sent')}
@@ -126,32 +135,58 @@ export default function InvitationsPage() {
               >
                 Sent ({sentInvitations.length})
               </button>
+              <button
+                onClick={() => setActiveTab('contributors')}
+                className={`${
+                  activeTab === 'contributors'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                Contributors ({contributorInvitations.length})
+              </button>
             </nav>
           </div>
         </div>
 
-        {/* Invitations List */}
-        {invitations.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-500">
-              {activeTab === 'received'
-                ? 'No invitations received yet'
-                : 'No invitations sent yet'}
-            </p>
+      {/* Invitations List */}
+      {activeTab === 'contributors' ? (
+        contributorInvitations.length === 0 ? (
+          <div className="text-center py-12 bg-card rounded-lg border shadow">
+            <p className="text-muted-foreground">No contributor invitations</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {invitations.map((invitation) => (
-              <div
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {contributorInvitations.map((invitation) => (
+              <ContributorInvitationCard
                 key={invitation.id}
-                className="bg-white rounded-lg shadow p-6"
-              >
+                invitation={invitation}
+                onStatusUpdate={() => loadInvitations()}
+              />
+            ))}
+          </div>
+        )
+      ) : invitations.length === 0 ? (
+        <div className="text-center py-12 bg-card rounded-lg border shadow">
+          <p className="text-muted-foreground">
+            {activeTab === 'received'
+              ? 'No team invitations received yet'
+              : 'No team invitations sent yet'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {invitations.map((invitation) => (
+            <div
+              key={invitation.id}
+              className="bg-card rounded-lg border shadow p-6"
+            >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {invitation.team?.name}
-                      </h3>
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-2">
+                  <h3 className="text-lg font-semibold">
+                    {invitation.team?.name}
+                  </h3>
                       {getStatusBadge(invitation.status)}
                       <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
                         {invitation.role}
@@ -214,13 +249,12 @@ export default function InvitationsPage() {
                         Cancel
                       </button>
                     )}
-                  </div>
-                </div>
               </div>
-            ))}
+            </div>
           </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

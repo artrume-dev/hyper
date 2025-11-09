@@ -54,18 +54,21 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const { firstName, lastName, username, bio, location, available, nextAvailability, avatar, hourlyRate } = req.body;
+    const { firstName, lastName, username, bio, jobTitle, location, country, available, nextAvailability, avatar, hourlyRate, currency } = req.body;
 
     const user = await userService.updateProfile(req.userId, {
       firstName,
       lastName,
       username,
       bio,
+      jobTitle,
       location,
+      country,
       available,
       nextAvailability: nextAvailability ? new Date(nextAvailability) : undefined,
       avatar,
       hourlyRate,
+      currency,
     });
 
     res.status(200).json({ user });
@@ -208,7 +211,7 @@ export const addPortfolio = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const { name, description, companyName, role, workUrls, mediaFiles } = req.body;
+    const { name, description, companyName, role, workUrls, mediaFiles, createdWith } = req.body;
 
     if (!name) {
       res.status(400).json({ error: 'Portfolio name is required' });
@@ -222,6 +225,7 @@ export const addPortfolio = async (req: Request, res: Response): Promise<void> =
       role,
       workUrls,
       mediaFiles, // Array of image URLs/base64 strings
+      createdWith, // Array of tools/methods
     });
 
     res.status(201).json({ portfolio });
@@ -242,7 +246,7 @@ export const updatePortfolio = async (req: Request, res: Response): Promise<void
     }
 
     const { portfolioId } = req.params;
-    const { name, description, companyName, role, workUrls, mediaFiles } = req.body;
+    const { name, description, companyName, role, workUrls, mediaFiles, createdWith } = req.body;
 
     const portfolio = await userService.updatePortfolio(req.userId, portfolioId, {
       name,
@@ -251,6 +255,7 @@ export const updatePortfolio = async (req: Request, res: Response): Promise<void
       role,
       workUrls,
       mediaFiles, // Array of image URLs/base64 strings
+      createdWith, // Array of tools/methods
     });
 
     res.status(200).json({ portfolio });

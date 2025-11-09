@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getCurrentUser, logout } from '../controllers/auth.controller.js';
+import { register, login, getCurrentUser, logout, oauthGoogle, oauthLinkedIn } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -17,6 +17,20 @@ router.post('/register', register);
  * @access  Public
  */
 router.post('/login', login);
+
+/**
+ * @route   POST /api/auth/oauth/google
+ * @desc    Google OAuth login/register
+ * @access  Public
+ */
+router.post('/oauth/google', oauthGoogle);
+
+/**
+ * @route   POST /api/auth/oauth/linkedin
+ * @desc    LinkedIn OAuth login/register
+ * @access  Public
+ */
+router.post('/oauth/linkedin', oauthLinkedIn);
 
 /**
  * @route   GET /api/auth/me

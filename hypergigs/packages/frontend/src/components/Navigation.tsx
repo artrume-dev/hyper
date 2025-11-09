@@ -16,11 +16,11 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto px-6 py-4">
+    <nav className="sticky relative top-2 max-w-[80%] z-50 backdrop-blur-lg mx-4 md:mx-auto">
+      <div className="mx-auto sm:px-6 lg:px-8 py-4 border border-slate-300 rounded-xl bg-white">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="text-2xl font-bold tracking-tight">
+          <Link to="/" className="text-2xl font-bold tracking-tight uppercase">
             Hypergigs
           </Link>
           
@@ -28,6 +28,9 @@ export default function Navigation() {
           <div className="hidden md:flex items-center gap-8">
             <Link to="/teams" className="text-sm font-medium hover:text-primary transition-colors">
               Teams
+            </Link>
+            <Link to="/jobs" className="text-sm font-medium hover:text-primary transition-colors">
+              Jobs
             </Link>
             <Link to="/freelancers" className="text-sm font-medium hover:text-primary transition-colors">
               Freelancers
@@ -101,29 +104,36 @@ export default function Navigation() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 pb-4 space-y-3">
-            <Link 
-              to="/teams" 
+            <Link
+              to="/teams"
               className="block py-2 text-sm font-medium hover:text-primary transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Teams
             </Link>
-            <Link 
-              to="/freelancers" 
+            <Link
+              to="/jobs"
+              className="block py-2 text-sm font-medium hover:text-primary transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Jobs
+            </Link>
+            <Link
+              to="/freelancers"
               className="block py-2 text-sm font-medium hover:text-primary transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Freelancers
             </Link>
-            <Link 
-              to="/projects" 
+            <Link
+              to="/projects"
               className="block py-2 text-sm font-medium hover:text-primary transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Projects
             </Link>
-            <Link 
-              to="/about" 
+            <Link
+              to="/about"
               className="block py-2 text-sm font-medium hover:text-primary transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >

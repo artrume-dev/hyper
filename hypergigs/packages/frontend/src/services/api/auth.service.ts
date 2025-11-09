@@ -37,4 +37,20 @@ export const authService = {
   async logout(): Promise<void> {
     await api.post('/api/auth/logout');
   },
+
+  /**
+   * OAuth Google login/register
+   */
+  async oauthGoogle(data: { credential: string; role?: string; country?: string }): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/api/auth/oauth/google', data);
+    return response.data;
+  },
+
+  /**
+   * OAuth LinkedIn login/register
+   */
+  async oauthLinkedIn(data: { code: string; role?: string; country?: string }): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/api/auth/oauth/linkedin', data);
+    return response.data;
+  },
 };

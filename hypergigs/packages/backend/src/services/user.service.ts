@@ -6,11 +6,14 @@ export interface UpdateProfileData {
   lastName?: string;
   username?: string;
   bio?: string;
+  jobTitle?: string;
   location?: string;
+  country?: string;
   available?: boolean;
   nextAvailability?: Date;
   avatar?: string;
   hourlyRate?: number;
+  currency?: string;
 }
 
 export interface SearchUsersFilters {
@@ -36,11 +39,14 @@ export class UserService {
         lastName: true,
         role: true,
         bio: true,
+        jobTitle: true,
         location: true,
+        country: true,
         avatar: true,
         available: true,
         nextAvailability: true,
         hourlyRate: true,
+        currency: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -61,6 +67,40 @@ export class UserService {
         portfolios: {
           orderBy: { createdAt: 'desc' },
           take: 6,
+          include: {
+            recommendations: {
+              where: { status: 'ACCEPTED' },
+              include: {
+                sender: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    avatar: true,
+                    jobTitle: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+            contributors: {
+              where: { status: 'ACCEPTED' },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    avatar: true,
+                    jobTitle: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
         },
         workExperiences: {
           orderBy: { startDate: 'desc' },
@@ -73,15 +113,31 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    // Parse mediaFiles JSON strings to arrays
+    // Parse mediaFiles and createdWith JSON strings to arrays
     const portfoliosWithParsedMedia = user.portfolios.map(portfolio => ({
       ...portfolio,
       mediaFiles: portfolio.mediaFiles ? JSON.parse(portfolio.mediaFiles) : [],
+      createdWith: portfolio.createdWith ? JSON.parse(portfolio.createdWith) : [],
     }));
+
+    // Calculate verified badge status
+    // User has badge if they have 3+ unique users who gave accepted recommendations (excluding simple likes)
+    const uniqueSenders = await prisma.recommendation.findMany({
+      where: {
+        receiverId: userId,
+        status: 'ACCEPTED',
+        message: { not: 'Liked this work' },
+      },
+      select: {
+        senderId: true,
+      },
+      distinct: ['senderId'],
+    });
 
     return {
       ...user,
       portfolios: portfoliosWithParsedMedia,
+      hasVerifiedBadge: uniqueSenders.length >= 3,
     };
   }
 
@@ -99,11 +155,14 @@ export class UserService {
         lastName: true,
         role: true,
         bio: true,
+        jobTitle: true,
         location: true,
+        country: true,
         avatar: true,
         available: true,
         nextAvailability: true,
         hourlyRate: true,
+        currency: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -124,6 +183,40 @@ export class UserService {
         portfolios: {
           orderBy: { createdAt: 'desc' },
           take: 6,
+          include: {
+            recommendations: {
+              where: { status: 'ACCEPTED' },
+              include: {
+                sender: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    avatar: true,
+                    jobTitle: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+            contributors: {
+              where: { status: 'ACCEPTED' },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    avatar: true,
+                    jobTitle: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
         },
         workExperiences: {
           orderBy: { startDate: 'desc' },
@@ -136,15 +229,31 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    // Parse mediaFiles JSON strings to arrays
+    // Parse mediaFiles and createdWith JSON strings to arrays
     const portfoliosWithParsedMedia = user.portfolios.map(portfolio => ({
       ...portfolio,
       mediaFiles: portfolio.mediaFiles ? JSON.parse(portfolio.mediaFiles) : [],
+      createdWith: portfolio.createdWith ? JSON.parse(portfolio.createdWith) : [],
     }));
+
+    // Calculate verified badge status
+    // User has badge if they have 3+ unique users who gave accepted recommendations (excluding simple likes)
+    const uniqueSenders = await prisma.recommendation.findMany({
+      where: {
+        receiverId: user.id,
+        status: 'ACCEPTED',
+        message: { not: 'Liked this work' },
+      },
+      select: {
+        senderId: true,
+      },
+      distinct: ['senderId'],
+    });
 
     return {
       ...user,
       portfolios: portfoliosWithParsedMedia,
+      hasVerifiedBadge: uniqueSenders.length >= 3,
     };
   }
 
@@ -183,11 +292,14 @@ export class UserService {
         lastName: true,
         role: true,
         bio: true,
+        jobTitle: true,
         location: true,
+        country: true,
         avatar: true,
         available: true,
         nextAvailability: true,
         hourlyRate: true,
+        currency: true,
         updatedAt: true,
       },
     });
@@ -249,6 +361,7 @@ export class UserService {
         lastName: true,
         role: true,
         bio: true,
+        jobTitle: true,
         location: true,
         avatar: true,
         available: true,
@@ -272,7 +385,30 @@ export class UserService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return users;
+    // Add hasVerifiedBadge to each user
+    const usersWithBadge = await Promise.all(
+      users.map(async (user) => {
+        // Count unique senders who gave accepted recommendations (excluding likes)
+        const uniqueSenders = await prisma.recommendation.findMany({
+          where: {
+            receiverId: user.id,
+            status: 'ACCEPTED',
+            message: { not: 'Liked this work' },
+          },
+          select: {
+            senderId: true,
+          },
+          distinct: ['senderId'],
+        });
+
+        return {
+          ...user,
+          hasVerifiedBadge: uniqueSenders.length >= 3,
+        };
+      })
+    );
+
+    return usersWithBadge;
   }
 
   /**
@@ -353,19 +489,22 @@ export class UserService {
     role?: string;
     workUrls?: string;
     mediaFiles?: string[];
+    createdWith?: string[];
   }) {
     const portfolio = await prisma.portfolio.create({
       data: {
         ...data,
         mediaFiles: data.mediaFiles ? JSON.stringify(data.mediaFiles) : '[]',
+        createdWith: data.createdWith ? JSON.stringify(data.createdWith) : '[]',
         userId,
       },
     });
 
-    // Parse mediaFiles back to array for response
+    // Parse mediaFiles and createdWith back to array for response
     const result = {
       ...portfolio,
       mediaFiles: portfolio.mediaFiles ? JSON.parse(portfolio.mediaFiles) : [],
+      createdWith: portfolio.createdWith ? JSON.parse(portfolio.createdWith) : [],
     };
 
     logger.info(`Portfolio item added for user ${userId}`);
@@ -382,6 +521,7 @@ export class UserService {
     role?: string;
     workUrls?: string;
     mediaFiles?: string[];
+    createdWith?: string[];
   }) {
     // Check if portfolio belongs to user
     const portfolio = await prisma.portfolio.findFirst({
@@ -400,13 +540,15 @@ export class UserService {
       data: {
         ...data,
         mediaFiles: data.mediaFiles ? JSON.stringify(data.mediaFiles) : undefined,
+        createdWith: data.createdWith ? JSON.stringify(data.createdWith) : undefined,
       },
     });
 
-    // Parse mediaFiles back to array for response
+    // Parse mediaFiles and createdWith back to array for response
     const result = {
       ...updatedPortfolio,
       mediaFiles: updatedPortfolio.mediaFiles ? JSON.parse(updatedPortfolio.mediaFiles) : [],
+      createdWith: updatedPortfolio.createdWith ? JSON.parse(updatedPortfolio.createdWith) : [],
     };
 
     logger.info(`Portfolio item updated: ${portfolioId}`);

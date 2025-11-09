@@ -1,0 +1,82 @@
+---
+description: Summarise today's work, commits, and file changes
+allowed-tools: Bash(git *), Read, Grep
+---
+
+# Summarize Today's Work
+
+Generate a comprehensive summary of all work done today in this repository.
+
+## Steps
+
+1. **Get Today's Date Range**
+   - Determine today's date
+   - Set time range from 00:00 today to now
+
+2. **Analyze Git Activity**
+   - Run `git log --since="midnight" --author="$(git config user.name)" --pretty=format:"%h - %s (%cr)" --all` to get today's commits
+   - Run `git log --since="midnight" --author="$(git config user.name)" --stat --all` to see file changes per commit
+   - Count total commits made today
+   - If no commits today, check for uncommitted changes with `git status`
+
+3. **Summarize Changes**
+   - List all files modified, added, or deleted today
+   - Group changes by category (e.g., features, fixes, documentation, tests)
+   - Calculate statistics:
+     - Number of commits
+     - Number of files changed
+     - Lines added/removed (from git log --stat)
+
+4. **Identify Work Themes**
+   - Analyze commit messages to identify main areas of work
+   - Group related commits together
+   - Identify any patterns (e.g., mostly bug fixes, feature development, refactoring)
+
+5. **Current Status**
+   - Check `git status` for any uncommitted work
+   - Note any untracked files or work in progress
+   - Check current branch with `git branch --show-current`
+
+6. **Generate Summary Report**
+
+## Output Format
+
+### 📊 Today's Development Summary
+**Date**: [current date]  
+**Total Commits**: [count]  
+**Files Changed**: [count]  
+**Current Branch**: [branch name]
+
+### 🎯 Main Activities
+- [Activity category 1]: [brief description]
+- [Activity category 2]: [brief description]
+- ...
+
+### 📝 Commits Made Today
+1. [commit hash] - [commit message] ([time ago])
+2. ...
+
+### 📁 Files Modified
+- [filename] - [change summary]
+- ...
+
+### ⚡ Key Highlights
+- [Important accomplishment or change]
+- [Notable improvement or fix]
+- ...
+
+### 🚧 Work in Progress
+- [Any uncommitted changes or ongoing work]
+
+### 📈 Statistics
+- **Commits**: [count]
+- **Files Changed**: [count]
+- **Lines Added**: ~[count]
+- **Lines Removed**: ~[count]
+
+## Notes
+
+- If no work was done today, provide a status report of the current repository state
+- Be concise but informative
+- Highlight the most important changes
+- Use emojis to make the summary more readable

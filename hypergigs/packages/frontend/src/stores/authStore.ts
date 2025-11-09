@@ -16,6 +16,7 @@ interface AuthActions {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
+  updateUser: (user: User) => void;
   clearError: () => void;
 }
 
@@ -74,7 +75,7 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false,
           });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || 'Registration failed';
+          const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Registration failed';
           set({
             error: errorMessage,
             isLoading: false,
@@ -136,6 +137,8 @@ export const useAuthStore = create<AuthStore>()(
           });
         }
       },
+
+      updateUser: (user: User) => set({ user }),
 
       clearError: () => set({ error: null }),
     }),

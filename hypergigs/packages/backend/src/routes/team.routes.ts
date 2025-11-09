@@ -11,6 +11,10 @@ import {
   removeTeamMember,
   updateMemberRole,
   leaveTeam,
+  createSubTeam,
+  getSubTeams,
+  getSuggestedMembers,
+  inviteMember,
 } from '../controllers/team.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
@@ -92,5 +96,33 @@ router.put('/:teamId/members/:userId/role', authenticate, updateMemberRole);
  * @access  Private
  */
 router.post('/:teamId/leave', authenticate, leaveTeam);
+
+/**
+ * @route   GET /api/teams/:teamId/sub-teams
+ * @desc    Get sub-teams of a team
+ * @access  Public
+ */
+router.get('/:teamId/sub-teams', getSubTeams);
+
+/**
+ * @route   POST /api/teams/:teamId/sub-teams
+ * @desc    Create a sub-team
+ * @access  Private (admin only)
+ */
+router.post('/:teamId/sub-teams', authenticate, createSubTeam);
+
+/**
+ * @route   GET /api/teams/:teamId/suggested-members
+ * @desc    Get suggested members for a team based on AI matching
+ * @access  Private (team members only)
+ */
+router.get('/:teamId/suggested-members', authenticate, getSuggestedMembers);
+
+/**
+ * @route   POST /api/teams/:teamId/invite
+ * @desc    Invite member with auto-detection (email or username)
+ * @access  Private (owner/admin only)
+ */
+router.post('/:teamId/invite', authenticate, inviteMember);
 
 export default router;

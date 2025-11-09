@@ -2,8 +2,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Use sqlite for local development
+// Railway will override DATABASE_URL with PostgreSQL connection string
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -11,18 +13,24 @@ model User {
   id                    String           @id @default(uuid())
   email                 String           @unique
   username              String           @unique
-  password              String
+  password              String?
   firstName             String?
   lastName              String?
   role                  String           @default("FREELANCER")
   bio                   String?
+  jobTitle              String?
   location              String?
+  country               String?
   avatar                String?
   available             Boolean          @default(true)
   nextAvailability      DateTime?
+  googleId              String?          @unique
+  linkedinId            String?          @unique
+  oauthProvider         String?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   hourlyRate            Float?
+  currency              String           @default("USD")
   following             Follow[]         @relation("UserFollowing")
   followers             Follow[]         @relation("UserFollowers")
   receivedInvitations   Invitation[]     @relation("InvitationReceiver")
@@ -36,33 +44,53 @@ model User {
   teamMembers           TeamMember[]
   skills                UserSkill[]
   workExperiences       WorkExperience[]
+  sentRecommendations   Recommendation[] @relation("RecommendationSender")
+  receivedRecommendations Recommendation[] @relation("RecommendationReceiver")
+  portfolioContributions PortfolioContributor[] @relation("PortfolioContributors")
+  addedContributors      PortfolioContributor[] @relation("AddedContributors")
+  createdJobPostings     JobPosting[]
+  jobApplications        JobApplication[]
+  sentEmailInvitations   EmailInvitation[]    @relation("SentEmailInvitations")
 
   @@index([email])
   @@index([username])
   @@index([role])
   @@index([location])
+  @@index([googleId])
+  @@index([linkedinId])
 }
 
 model Team {
-  id          String       @id @default(uuid())
-  name        String
-  slug        String       @unique
-  description String?
-  avatar      String?
-  type        String       @default("PROJECT")
-  city        String?
-  ownerId     String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  invitations Invitation[]
-  messages    Message[]
-  projects    Project[]
-  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
-  members     TeamMember[]
+  id              String           @id @default(uuid())
+  name            String
+  slug            String           @unique
+  description     String?
+  avatar          String?
+  type            String           @default("TEAM")
+  subTeamCategory String?          // For sub-teams: ENGINEERING, MARKETING, DESIGN, HR, SALES, PRODUCT, OPERATIONS, FINANCE, LEGAL, SUPPORT, OTHER
+  city            String?
+  ownerId         String
+  parentTeamId    String?          // For sub-teams
+  isMainTeam      Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  invitations     Invitation[]
+  emailInvitations EmailInvitation[]
+  messages        Message[]
+  projects        Project[]
+  jobPostings     JobPosting[]     @relation("TeamJobPostings")
+  subTeamJobPostings JobPosting[]  @relation("SubTeamJobPostings")
+  owner           User             @relation("TeamOwner", fields: [ownerId], references: [id])
+  members         TeamMember[]
+  recommendations Recommendation[]
+  parentTeam      Team?            @relation("TeamHierarchy", fields: [parentTeamId], references: [id], onDelete: Cascade)
+  subTeams        Team[]           @relation("TeamHierarchy")
 
   @@index([slug])
   @@index([ownerId])
   @@index([type])
+  @@index([parentTeamId])
+  @@index([subTeamCategory])
 }
 
 model TeamMember {
@@ -96,6 +124,28 @@ model Invitation {
 
   @@index([senderId])
   @@index([receiverId])
+  @@index([teamId])
+  @@index([status])
+}
+
+model EmailInvitation {
+  id        String   @id @default(uuid())
+  email     String
+  teamId    String
+  role      String   @default("MEMBER")
+  message   String?
+  invitedBy String
+  token     String   @unique
+  status    String   @default("PENDING")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inviter   User     @relation("SentEmailInvitations", fields: [invitedBy], references: [id])
+
+  @@unique([email, teamId])
+  @@index([token])
+  @@index([email])
   @@index([teamId])
   @@index([status])
 }
@@ -178,10 +228,13 @@ model Portfolio {
   role        String?
   workUrls    String?
   mediaFiles  String?  @default("[]") // JSON array stored as string for SQLite compatibility
-  userId      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdWith     String?          @default("[]") // JSON array of tools/methods used
+  userId          String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
+  contributors    PortfolioContributor[]
 
   @@index([userId])
 }
@@ -203,19 +256,119 @@ model WorkExperience {
 }
 
 model Project {
-  id           String    @id @default(uuid())
-  title        String
-  description  String
-  workLocation String?
-  startDate    DateTime?
-  duration     Int?
-  minCost      Int?
-  maxCost      Int?
-  currency     String?
-  teamId       String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  team         Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  id              String           @id @default(uuid())
+  title           String
+  description     String
+  workLocation    String?
+  startDate       DateTime?
+  duration        Int?
+  minCost         Int?
+  maxCost         Int?
+  currency        String?
+  teamId          String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  team            Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
 
   @@index([teamId])
+}
+
+model Recommendation {
+  id          String     @id @default(uuid())
+  message     String
+  status      String     @default("PENDING")
+  type        String     @default("REQUEST") // REQUEST or GIVEN
+  rating      Int?       // 1-5 star rating (for portfolio recommendations)
+  senderId    String
+  receiverId  String
+  portfolioId String?    // Optional - for portfolio-based recommendations
+  projectId   String?    // Optional - for team project-based recommendations
+  teamId      String?    // Optional - for team/collaboration context
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  sender      User       @relation("RecommendationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User       @relation("RecommendationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team        Team?      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([portfolioId])
+  @@index([projectId])
+  @@index([teamId])
+  @@index([status])
+  @@index([type])
+}
+
+model PortfolioContributor {
+  id          String    @id @default(uuid())
+  portfolioId String
+  userId      String    // The contributor
+  status      String    @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  addedBy     String    // User who added this contributor
+  role        String?   // Optional: "Frontend Dev", "Designer", etc.
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  user        User      @relation("PortfolioContributors", fields: [userId], references: [id], onDelete: Cascade)
+  addedByUser User      @relation("AddedContributors", fields: [addedBy], references: [id])
+
+  @@unique([portfolioId, userId])
+  @@index([portfolioId])
+  @@index([userId])
+  @@index([addedBy])
+  @@index([status])
+}
+
+model JobPosting {
+  id           String           @id @default(uuid())
+  title        String
+  description  String
+  location     String?
+  type         String           @default("FULL_TIME") // FULL_TIME, PART_TIME, CONTRACT, FREELANCE
+  status       String           @default("ACTIVE") // ACTIVE, CLOSED, DRAFT
+  isFeatured   Boolean          @default(false) // Featured jobs appear at top with special styling
+  isSponsored  Boolean          @default(false) // Sponsored jobs interspersed in job list
+  minSalary    Int?
+  maxSalary    Int?
+  currency     String?          @default("USD")
+  teamId       String
+  subTeamId    String?          // Optional: Link to specific sub-team/department
+  createdBy    String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  team         Team             @relation("TeamJobPostings", fields: [teamId], references: [id], onDelete: Cascade)
+  subTeam      Team?            @relation("SubTeamJobPostings", fields: [subTeamId], references: [id], onDelete: SetNull)
+  creator      User             @relation(fields: [createdBy], references: [id])
+  applications JobApplication[]
+
+  @@index([teamId])
+  @@index([subTeamId])
+  @@index([createdBy])
+  @@index([status])
+  @@index([teamId, status])
+  @@index([subTeamId, status])
+  @@index([status, isFeatured])
+  @@index([status, isSponsored])
+}
+
+model JobApplication {
+  id           String      @id @default(uuid())
+  jobId        String
+  userId       String
+  status       String      @default("PENDING") // PENDING, REVIEWING, ACCEPTED, REJECTED
+  coverLetter  String?
+  resumeUrl    String?
+  portfolioUrl String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  job          JobPosting  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([jobId])
+  @@index([userId])
+  @@index([status])
 }

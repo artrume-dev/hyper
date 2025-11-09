@@ -110,4 +110,65 @@ export const teamService = {
   async leaveTeam(teamId: string): Promise<void> {
     await api.post(`/api/teams/${teamId}/leave`);
   },
+
+  /**
+   * Create a sub-team under a parent team
+   */
+  async createSubTeam(
+    parentTeamId: string,
+    data: CreateTeamRequest
+  ): Promise<Team> {
+    const response = await api.post<{ team: Team }>(
+      `/api/teams/${parentTeamId}/sub-teams`,
+      data
+    );
+    return response.data.team;
+  },
+
+  /**
+   * Get all sub-teams of a main team
+   */
+  async getSubTeams(teamId: string): Promise<Team[]> {
+    const response = await api.get<{ subTeams: Team[] }>(
+      `/api/teams/${teamId}/sub-teams`
+    );
+    return response.data.subTeams;
+  },
+
+  /**
+   * Get team hierarchy (team + sub-teams with stats)
+   */
+  async getTeamHierarchy(teamId: string): Promise<{
+    team: Team;
+    subTeams: Team[];
+    totalMembers: number;
+    activeJobsCount: number;
+  }> {
+    const response = await api.get(`/api/teams/${teamId}/hierarchy`);
+    return response.data;
+  },
+
+  /**
+   * Get team statistics
+   */
+  async getTeamStats(teamId: string): Promise<{
+    subTeamsCount: number;
+    totalMembers: number;
+    activeJobsCount: number;
+    mainTeamMembers: number;
+    subTeamMembers: number;
+  }> {
+    const response = await api.get(`/api/teams/${teamId}/stats`);
+    return response.data;
+  },
+
+  /**
+   * Get active jobs count per sub-team
+   */
+  async getSubTeamJobCounts(parentTeamId: string): Promise<Record<string, number>> {
+    const response = await api.get<{ counts: Record<string, number> }>(
+      `/api/jobs/teams/${parentTeamId}/sub-teams/counts`
+    );
+    return response.data.counts;
+  },
 };

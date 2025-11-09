@@ -1,4 +1,5 @@
 export type UserRole = 'FREELANCER' | 'AGENCY' | 'STARTUP';
+export type Currency = 'USD' | 'GBP' | 'EUR';
 
 export interface User {
   id: string;
@@ -8,11 +9,15 @@ export interface User {
   lastName: string;
   role: UserRole;
   bio?: string;
+  jobTitle?: string;
   location?: string;
+  country?: string;
   avatar?: string;
   available: boolean;
   nextAvailability?: string;
   hourlyRate?: number;
+  currency: Currency;
+  hasVerifiedBadge?: boolean; // True if user has 1+ accepted recommendations
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +38,15 @@ export interface RegisterRequest {
   name: string;
   username: string;
   role: UserRole;
+  country?: string;
+  invitationToken?: string;
+}
+
+export interface OAuthRegisterRequest {
+  provider: 'google' | 'linkedin';
+  token: string;
+  role: UserRole;
+  country?: string;
 }
 
 export interface AuthError {
